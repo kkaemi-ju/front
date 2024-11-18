@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-[#FFFBE6] flex flex-col">
+  <div class="bg-[#FFFBE6] flex flex-col min-h-screen">
     <!-- Header -->
     <Header/>
 
@@ -30,18 +30,45 @@
             </div>
           </div>
         </div>
+
+        <!-- Navigation Arrows -->
         <button
           @click="prevSlide"
-          class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/50 p-2 rounded-full"
+          class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/50 hover:bg-white/70 p-2 rounded-full transition-colors"
         >
           <ChevronLeft class="h-6 w-6 text-gray-800" />
         </button>
         <button
           @click="nextSlide"
-          class="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/50 p-2 rounded-full"
+          class="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/50 hover:bg-white/70 p-2 rounded-full transition-colors"
         >
           <ChevronRight class="h-6 w-6 text-gray-800" />
         </button>
+
+        <!-- Slide Controls -->
+        <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-black/30 px-6 py-3 rounded-full">
+          <!-- Slide Counter -->
+          <div class="text-white font-medium">
+            {{ currentSlide + 1 }} / {{ heroSlides.length }}
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-32 h-1 bg-white/30 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-white transition-all duration-100"
+              :style="{ width: `${(timeLeft / slideDuration) * 100}%` }"
+            ></div>
+          </div>
+
+          <!-- Play/Pause Button -->
+          <button
+            @click="toggleSlideShow"
+            class="text-white hover:text-gray-200 transition-colors"
+          >
+            <Pause v-if="isPlaying" class="h-5 w-5" />
+            <Play v-else class="h-5 w-5" />
+          </button>
+        </div>
       </section>
 
       <!-- Categories -->
@@ -83,10 +110,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { Menu, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { Menu, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-vue-next'
 import Header from "./components/common/Header.vue"
 import Footer from "./components/common/Footer.vue"
+
 const categories = ref([
   { name: '관광지', link: '/spots' },
   { name: '계획', link: '/plan' },
@@ -100,9 +128,6 @@ const hotSpots = ref([
   { title: "추천 명소", image: "/placeholder.svg?height=400&width=300" }
 ])
 
-const socialMedia = ref(['Instagram', 'Facebook', 'Twitter'])
-
-// Hero Slider logic
 const heroSlides = ref([
   {
     image: "/placeholder.svg?height=500&width=1000",
@@ -122,28 +147,58 @@ const heroSlides = ref([
 ])
 
 const currentSlide = ref(0)
+const isPlaying = ref(true)
 const slideInterval = ref(null)
+const timeLeft = ref(3000)
+const slideDuration = 3000 // 3 seconds
 
 const nextSlide = () => {
   currentSlide.value = (currentSlide.value + 1) % heroSlides.value.length
+  timeLeft.value = slideDuration
 }
 
 const prevSlide = () => {
   currentSlide.value = (currentSlide.value - 1 + heroSlides.value.length) % heroSlides.value.length
+  timeLeft.value = slideDuration
 }
 
 const startSlideShow = () => {
-  slideInterval.value = setInterval(nextSlide, 3000)
+  if (!slideInterval.value) {
+    slideInterval.value = setInterval(() => {
+      timeLeft.value -= 100
+      if (timeLeft.value <= 0) {
+        nextSlide()
+      }
+    }, 100)
+  }
 }
 
 const stopSlideShow = () => {
   if (slideInterval.value) {
     clearInterval(slideInterval.value)
+    slideInterval.value = null
   }
 }
 
+const toggleSlideShow = () => {
+  isPlaying.value = !isPlaying.value
+  if (isPlaying.value) {
+    startSlideShow()
+  } else {
+    stopSlideShow()
+  }
+}
+
+// Watch for manual navigation to reset timer
+watch(currentSlide, () => {
+  timeLeft.value = slideDuration
+})
+
 onMounted(() => {
-  startSlideShow()
+  timeLeft.value = slideDuration
+  if (isPlaying.value) {
+    startSlideShow()
+  }
 })
 
 onUnmounted(() => {
