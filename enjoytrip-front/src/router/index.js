@@ -2,6 +2,9 @@ import { createRouter, createWebHistory } from "vue-router";
 import AppVue from "../App.vue";
 import Mypage from "../views/Mypage.vue";
 import MainVue from "../views/Main.vue";
+import BoardList from "../views/BoardList.vue"
+import BoardDetail from "../views/BoardDetail.vue"
+import BoardWrite from "../views/BoardWrite.vue"
 import Attractions from "@/views/Attraction.vue";
 
 const router = createRouter({
@@ -20,7 +23,9 @@ const router = createRouter({
       // which is lazy-loaded when the route is visited.
       // component: () => import('../views/AboutView.vue'),
     },
-
+    { path: "/board", name:"boardlist", component:BoardList},
+    { path: "/boardwrite", name:"boardwrite", component:BoardWrite},
+    { path: "/boarddeatil", name:"boarddeatil", component:BoardDetail},
     { path: "/mypage", name: "mypage", component: Mypage },
     { path: "/attractions", name: "attractions", component: Attractions },
   ],

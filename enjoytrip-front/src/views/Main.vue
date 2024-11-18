@@ -127,14 +127,14 @@
       </section>
     </main>
 
-    <Footer />
+
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import { Menu, ChevronLeft, ChevronRight, Pause, Play } from "lucide-vue-next";
-import Footer from "../components/common/Footer.vue";
+
 
 const categories = ref([
   { name: "관광지", link: "/spots" },
