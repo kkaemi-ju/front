@@ -1,9 +1,7 @@
 <template>
   <div>
     <!-- Header -->
-    <header
-      class="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60"
-    >
+    <header class="sticky top-0 z-50 w-full border-b bg-[#FFFBE6]">
       <div
         class="container mx-auto flex h-16 items-center justify-between px-4"
       >
@@ -25,7 +23,7 @@
           <!-- 마이페이지 (로그인 상태에서만 표시) -->
           <router-link
             v-if="isLoggedIn"
-            to="/mypage"
+            to="/Mypage"
             class="text-sm font-medium text-[#00712D] hover:text-[#FF9100] transition-colors"
           >
             마이페이지
@@ -70,7 +68,7 @@ import { ref, reactive } from "vue";
 import LoginModal from "../modal/Login.vue";
 import JoinModal from "../modal/Join.vue";
 
-const isLoggedIn = ref(false);
+const isLoggedIn = ref(true);
 const showLoginModal = ref(false); // 모달 표시 상태
 const showJoinModal = ref(false);
 

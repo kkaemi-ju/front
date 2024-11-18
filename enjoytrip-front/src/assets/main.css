@@ -1,10 +1,11 @@
-@import './base.css';
+@import "./base.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 @tailwind variants;
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -48,5 +49,13 @@ a,
     display: flex;
     flex-wrap: wrap; /* 내용이 넘칠 경우 다음 줄로 정렬 */
     gap: 0; /* 여백 없이 꽉 채우기 */
+  }
+
+  body {
+    /* 전체 화면 흰색으로 변경 */
+    background-color: #ffffff;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
   }
 }
