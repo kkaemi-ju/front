@@ -149,8 +149,8 @@ const heroSlides = ref([
 const currentSlide = ref(0)
 const isPlaying = ref(true)
 const slideInterval = ref(null)
-const timeLeft = ref(3000)
-const slideDuration = 3000 // 3 seconds
+const timeLeft = ref(5000)
+const slideDuration = 5000 // 5 seconds
 
 const nextSlide = () => {
   currentSlide.value = (currentSlide.value + 1) % heroSlides.value.length
