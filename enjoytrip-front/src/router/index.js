@@ -6,7 +6,24 @@ import BoardList from "../views/BoardList.vue"
 import BoardDetail from "../views/BoardDetail.vue"
 import BoardWrite from "../views/BoardWrite.vue"
 import Attractions from "@/views/Attraction.vue";
+import { storeToRefs } from "pinia";
+import {useUserStore} from "../stores/user";
+const onlyAuthUser = async (to, from, next) => {
+  const userStore = useUserStore();
+  const { userInfo, isValidToken } = storeToRefs(userStore);
+  const { getUserInfo } = userStore;
 
+  let token = sessionStorage.getItem("accessToken");
+
+  if (userInfo.value != null && token) {
+    await getUserInfo(token);
+  }
+  if (!isValidToken.value || userInfo.value === null) {
+    next({ name: "user-login" });
+  } else {
+    next();
+  }
+};
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -23,7 +40,12 @@ const router = createRouter({
       // which is lazy-loaded when the route is visited.
       // component: () => import('../views/AboutView.vue'),
     },
-    { path: "/board", name:"boardlist", component:BoardList},
+    {
+      path: "/board",
+      name:"boardlist",
+      beforeEnter:onlyAuthUser,
+      component:BoardList,
+    },
     { path: "/boardwrite", name:"boardwrite", component:BoardWrite},
     { path: "/boarddetail", name:"boarddetail", component:BoardDetail},
     { path: "/mypage", name: "mypage", component: Mypage },

@@ -132,11 +132,7 @@ const handleLogin = async () => {
 
 // 로그아웃 처리
 const handleLogout = () => {
-  try {
-    userLogout();
-    console.log("로그아웃!!!!");
-  } catch (error) {
-    console.error("로그아웃 실패", error);
-  }
+  userLogout();
+  //메뉴 체인지
 };
 </script>

@@ -55,8 +55,9 @@ import axios from "axios";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/user";
 import router from "@/router";
-const {isLoggedIn} = storeToRefs(userStore)
+
 const userStore = useUserStore();
+const {isLoggedIn} = storeToRefs(userStore)
 const { userLogin, getUserInfo } = userStore;
 const loginUser = ref({
   userId: "",
@@ -70,7 +71,7 @@ const login = async () => {
   console.log(token)
   console.log("isLogin: "+isLoggedIn.value)
   if(isLoggedIn.value){
-    getUserInfo(token)
+    await getUserInfo(token)
     //changemenu
 
   }
