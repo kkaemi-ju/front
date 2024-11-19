@@ -21,14 +21,45 @@
         </div>
       </div>
 
+      <!-- Search Section -->
+      <div class="container mx-auto py-6 px-4">
+        <div class="flex justify-between items-center mb-4">
+          <h1 class="text-2xl font-bold text-[#00712D]">{{ activeBoard }}</h1>
+          <!-- 검색 필터 -->
+          <div class="flex space-x-4 items-center ml-auto">
+            <select
+              v-model="selectedFilter"
+              class="p-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#00712D]"
+            >
+              <option value="title">제목</option>
+              <option value="author">작성자</option>
+              <option value="content">내용</option>
+            </select>
+            <!-- 검색 입력 -->
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="검색어를 입력하세요"
+              class="p-2 border rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-[#00712D]"
+            />
+            <!-- 검색 버튼 -->
+            <button
+              @click="searchPosts"
+              class="px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors"
+            >
+              검색
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Board Content -->
       <div class="container mx-auto py-6 px-4">
         <!-- Board Header -->
         <div class="flex justify-between items-center mb-6">
-          <h1 class="text-2xl font-bold text-[#00712D]">{{ activeBoard }}</h1>
           <button
             @click="goToPage('boardwrite')"
-            class="px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors"
+            class="ml-auto px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors"
           >
             글쓰기
           </button>
@@ -52,7 +83,6 @@
                 :key="post.id"
                 @click="goToPage('boarddetail', post.id)"
                 class="hover:bg-[#FFFBE6]/50 transition-colors"
-
               >
                 <td class="px-6 py-4 text-sm text-gray-600">{{ post.id }}</td>
                 <td class="px-6 py-4">
@@ -73,100 +103,61 @@
             </tbody>
           </table>
         </div>
-
-        <!-- Pagination -->
-        <div class="flex justify-center mt-6 gap-2 items-center">
-          <button
-            class="p-2 rounded-full hover:bg-[#D5ED9F]/30 text-[#00712D]"
-            @click="changePage(Math.max(1, currentPage - 1))"
-          >
-            <ChevronLeft class="w-5 h-5" />
-          </button>
-          <button
-            v-for="page in totalPages"
-            :key="page"
-            @click="changePage(page)"
-            :class="[
-              'px-3 py-1 rounded-md text-sm',
-              currentPage === page
-                ? 'bg-[#00712D] text-white'
-                : 'bg-white text-gray-600 hover:bg-[#D5ED9F]/30'
-            ]"
-          >
-            {{ page }}
-          </button>
-          <button
-            class="p-2 rounded-full hover:bg-[#D5ED9F]/30 text-[#00712D]"
-            @click="changePage(Math.min(totalPages, currentPage + 1))"
-          >
-            <ChevronRight class="w-5 h-5" />
-          </button>
-        </div>
       </div>
     </div>
   </template>
-<script setup>
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
-import { useRouter } from 'vue-router' // Vue Router 사용
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
-const router = useRouter() // Router 인스턴스 생성
+  <script setup>
+  import { ref, onMounted } from 'vue'
+  import axios from 'axios'
+  import { useRouter } from 'vue-router'
 
-const activeBoard = ref('자유게시판')
+  const router = useRouter()
 
-const boards = [
-  { id: 'free', name: '자유게시판' },
-  { id: 'hot', name: '핫플게시판' },
-  { id: 'notice', name: '공지사항' }
-]
+  const activeBoard = ref('자유게시판')
 
-const posts = ref([...Array(5)].map((_, index) => ({
-  id: 10 - index,
-  title: '여행 후기입니다',
-  author: '사용자',
-  date: '2023-12-17',
-  views: 0,
-  isNew: index < 2
-})))
+  const boards = [
+    { id: 'free', name: '자유게시판' },
+    { id: 'hot', name: '핫플게시판' },
+    { id: 'notice', name: '공지사항' }
+  ]
 
-const currentPage = ref(1)
-const totalPages = 5
+  const posts = ref([...Array(5)].map((_, index) => ({
+    id: 10 - index,
+    title: '여행 후기입니다',
+    author: '사용자',
+    date: '2023-12-17',
+    views: 0,
+    isNew: index < 2
+  })))
 
-const setActiveBoard = (boardName) => {
-  activeBoard.value = boardName
-}
+  const selectedFilter = ref('title') // 검색 필터
+  const searchQuery = ref('') // 검색어
 
-const changePage = (page) => {
-  currentPage.value = page
-}
-
-// 페이지 이동 함수
-const goToPage = (page, data = null) => {
-  if (data) {
-    // 데이터가 있을 경우 params를 사용하여 전달
-    router.push({ name: page, params: { id: data } })
-  } else {
-    // 데이터가 없을 경우 단순 이동
-    router.push({ name: page })
+  const setActiveBoard = (boardName) => {
+    activeBoard.value = boardName
   }
-}
-const fetchPosts = async () => {
-  try {
-    const response = await axios.get('http://localhost/api/posts')
-    // posts.value = response.data.posts // 서버에서 가져온 데이터를 posts에 저장
-    console.log(response.data)
-  } catch (error) {
-    console.error('게시글 데이터를 가져오는 데 실패했습니다:', error)
+
+  const goToPage = (page, data = null) => {
+    if (data) {
+      router.push({ name: page, params: { id: data } })
+    } else {
+      router.push({ name: page })
+    }
   }
-}
-onMounted(() => {
-    fetchPosts();
-})
-</script>
+
+  const searchPosts = () => {
+    console.log('검색 필터:', selectedFilter.value)
+    console.log('검색어:', searchQuery.value)
+  }
+
+  onMounted(() => {
+    console.log('페이지 로드 완료')
+  })
+  </script>
 
   <style scoped>
   .menu-wrapper {
-    margin-top: 1rem; /* 메뉴 위 여백 */
+    margin-top: 1rem;
   }
   </style>
