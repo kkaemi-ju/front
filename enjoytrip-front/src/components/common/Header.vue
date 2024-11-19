@@ -67,9 +67,12 @@
 import { ref, reactive } from "vue";
 import LoginModal from "../modal/Login.vue";
 import JoinModal from "../modal/Join.vue";
+import { storeToRefs } from "pinia";
+import { useUserStore } from "@/stores/user";
+const userStore = useUserStore();
+const { userLogin, userLogout } = userStore;
+const { isLoggedIn, showLoginModal } = storeToRefs(userStore);
 
-const isLoggedIn = ref(true);
-const showLoginModal = ref(false); // 모달 표시 상태
 const showJoinModal = ref(false);
 
 const loginForm = reactive({
@@ -114,11 +117,14 @@ const closeJoinModal = () => {
 // 로그인 처리
 const handleLogin = async () => {
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // 로그인 API 호출 시뮬레이션
-    isLoggedIn.value = true;
-    showLoginModal.value = false;
+    await userLogin({
+      email: loginForm.email,
+      password: loginForm.password,
+    });
+
     loginForm.email = "";
     loginForm.password = "";
+    console.log("로그인 성공!");
   } catch (error) {
     console.error("Login failed:", error);
   }
@@ -126,6 +132,11 @@ const handleLogin = async () => {
 
 // 로그아웃 처리
 const handleLogout = () => {
-  isLoggedIn.value = false;
+  try {
+    userLogout();
+    console.log("로그아웃!!!!");
+  } catch (error) {
+    console.error("로그아웃 실패", error);
+  }
 };
 </script>
