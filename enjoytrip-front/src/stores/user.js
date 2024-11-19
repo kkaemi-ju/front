@@ -42,6 +42,31 @@ export const useUserStore = defineStore("userStore", () => {
       console.log("로그아웃 중 오류가 발생했습니다.", error);
     }
   };
+
+  const getUserInfo = async (token) => {
+    // let decodeToken = jwtDecode(token)
+    // console.log(decodeToken)
+    // await findById(
+    //   decodeToken.userId,
+    //   (response) => {
+    //     if (response.status === httpStatusCode.OK) {
+    //       userInfo.value = response.data.userInfo
+    //     } else {
+    //       console.log("유저 정보 없음!!!!")
+    //     }
+    //   },
+    //   async (error) => {
+    //     console.error(
+    //       "g[토큰 만료되어 사용 불가능.] : ",
+    //       error.response.status,
+    //       error.response.statusText
+    //     )
+    //     isValidToken.value = false
+
+    //     await tokenRegenerate()
+    //   }
+    // )
+  }
   return {
     isLoggedIn,
     showLoginModal,
@@ -49,5 +74,6 @@ export const useUserStore = defineStore("userStore", () => {
     userInfo,
     userLogin,
     userLogout,
+    getUserInfo
   };
 });

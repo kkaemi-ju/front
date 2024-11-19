@@ -54,8 +54,10 @@ import { ref, onMounted } from "vue";
 import axios from "axios";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/user";
+import router from "@/router";
+const {isLoggedIn} = storeToRefs(userStore)
 const userStore = useUserStore();
-const { userLogin } = userStore;
+const { userLogin, getUserInfo } = userStore;
 const loginUser = ref({
   userId: "",
   userPwd: "",
@@ -64,6 +66,14 @@ const email = ref("");
 const password = ref("");
 const login = async () => {
   await userLogin(loginUser.value);
+  let token = sessionStorage.getItem("accessToken")
+  console.log(token)
+  console.log("isLogin: "+isLoggedIn.value)
+  if(isLoggedIn.value){
+    getUserInfo(token)
+    //changemenu
+
+  }
 };
 
 onMounted(() => {
