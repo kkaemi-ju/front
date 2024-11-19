@@ -25,7 +25,7 @@ const router = createRouter({
     },
     { path: "/board", name:"boardlist", component:BoardList},
     { path: "/boardwrite", name:"boardwrite", component:BoardWrite},
-    { path: "/boarddeatil", name:"boarddeatil", component:BoardDetail},
+    { path: "/boarddetail", name:"boarddetail", component:BoardDetail},
     { path: "/mypage", name: "mypage", component: Mypage },
     { path: "/attractions", name: "attractions", component: Attractions },
   ],

@@ -75,6 +75,13 @@
                   class="w-24 h-24 object-cover rounded-md border cursor-pointer"
                   @click="openImageModal(image)"
                 />
+                <!-- 삭제 버튼 -->
+                <button
+                  @click="removeImage(index)"
+                  class="absolute top-1 right-1 bg-red-500 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
+                >
+                  ×
+                </button>
               </div>
             </div>
           </div>
@@ -123,6 +130,10 @@
       }
       reader.readAsDataURL(file)
     })
+  }
+
+  const removeImage = (index) => {
+    uploadedImages.value.splice(index, 1)
   }
 
   const openImageModal = (image) => {

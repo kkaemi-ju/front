@@ -1,7 +1,7 @@
 <template>
     <div class="min-h-screen bg-[#FFFBE6]/30">
       <!-- Board Categories -->
-      <div class="w-full border-b mt-8"> <!-- Top에서 margin 추가 -->
+      <div class="w-full border-b mt-8">
         <div class="container mx-auto flex justify-center">
           <div class="inline-flex w-full max-w-4xl justify-around border-b border-gray-300">
             <button
@@ -26,7 +26,10 @@
         <!-- Board Header -->
         <div class="flex justify-between items-center mb-6">
           <h1 class="text-2xl font-bold text-[#00712D]">{{ activeBoard }}</h1>
-          <button class="px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors">
+          <button
+            @click="goToPage('boardwrite')"
+            class="px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors"
+          >
             글쓰기
           </button>
         </div>
@@ -47,7 +50,9 @@
               <tr
                 v-for="post in posts"
                 :key="post.id"
+                @click="goToPage('boarddetail', post.id)"
                 class="hover:bg-[#FFFBE6]/50 transition-colors"
+
               >
                 <td class="px-6 py-4 text-sm text-gray-600">{{ post.id }}</td>
                 <td class="px-6 py-4">
@@ -100,39 +105,52 @@
       </div>
     </div>
   </template>
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router' // Vue Router 사용
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
-  <script setup>
-  import { ref } from 'vue'
-  import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+const router = useRouter() // Router 인스턴스 생성
 
-  const activeBoard = ref('자유게시판')
+const activeBoard = ref('자유게시판')
 
-  const boards = [
-    { id: 'free', name: '자유게시판' },
-    { id: 'hot', name: '핫플게시판' },
-    { id: 'notice', name: '공지사항' }
-  ]
+const boards = [
+  { id: 'free', name: '자유게시판' },
+  { id: 'hot', name: '핫플게시판' },
+  { id: 'notice', name: '공지사항' }
+]
 
-  const posts = ref([...Array(5)].map((_, index) => ({
-    id: 10 - index,
-    title: '여행 후기입니다',
-    author: '사용자',
-    date: '2023-12-17',
-    views: 0,
-    isNew: index < 2
-  })))
+const posts = ref([...Array(5)].map((_, index) => ({
+  id: 10 - index,
+  title: '여행 후기입니다',
+  author: '사용자',
+  date: '2023-12-17',
+  views: 0,
+  isNew: index < 2
+})))
 
-  const currentPage = ref(1)
-  const totalPages = 5
+const currentPage = ref(1)
+const totalPages = 5
 
-  const setActiveBoard = (boardName) => {
-    activeBoard.value = boardName
+const setActiveBoard = (boardName) => {
+  activeBoard.value = boardName
+}
+
+const changePage = (page) => {
+  currentPage.value = page
+}
+
+// 페이지 이동 함수
+const goToPage = (page, data = null) => {
+  if (data) {
+    // 데이터가 있을 경우 params를 사용하여 전달
+    router.push({ name: page, params: { id: data } })
+  } else {
+    // 데이터가 없을 경우 단순 이동
+    router.push({ name: page })
   }
-
-  const changePage = (page) => {
-    currentPage.value = page
-  }
-  </script>
+}
+</script>
 
   <style scoped>
   .menu-wrapper {
