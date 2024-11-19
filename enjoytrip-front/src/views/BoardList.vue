@@ -106,7 +106,8 @@
     </div>
   </template>
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
 import { useRouter } from 'vue-router' // Vue Router 사용
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
@@ -150,6 +151,18 @@ const goToPage = (page, data = null) => {
     router.push({ name: page })
   }
 }
+const fetchPosts = async () => {
+  try {
+    const response = await axios.get('http://localhost/api/posts')
+    // posts.value = response.data.posts // 서버에서 가져온 데이터를 posts에 저장
+    console.log(response.data)
+  } catch (error) {
+    console.error('게시글 데이터를 가져오는 데 실패했습니다:', error)
+  }
+}
+onMounted(() => {
+    fetchPosts();
+})
 </script>
 
   <style scoped>
