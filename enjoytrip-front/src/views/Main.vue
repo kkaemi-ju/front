@@ -126,15 +126,12 @@
         </div>
       </section>
     </main>
-
-
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import { Menu, ChevronLeft, ChevronRight, Pause, Play } from "lucide-vue-next";
-
 
 const categories = ref([
   { name: "관광지", link: "/spots" },
@@ -146,7 +143,7 @@ const hotSpots = ref([
   { title: "싸피 구미캠", image: "/placeholder.svg?height=400&width=300" },
   { title: "재경집", image: "/placeholder.svg?height=400&width=300" },
   { title: "선주집", image: "/placeholder.svg?height=400&width=300" },
-  { title: "추천 명소", image: "/placeholder.svg?height=400&width=300" },
+  { title: "베른", image: "/placeholder.svg?height=400&width=300" },
 ]);
 
 const heroSlides = ref([
