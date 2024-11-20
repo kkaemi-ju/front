@@ -13,6 +13,7 @@
           <input
             type="text"
             id="userid"
+            required
             v-model="loginUser.userId"
             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FF9100] focus:ring focus:ring-[#FF9100] focus:ring-opacity-50"
           />

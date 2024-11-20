@@ -3,6 +3,7 @@ import { useRouter } from "vue-router";
 import { defineStore } from "pinia";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
+import { AlertTriangle } from "lucide-vue-next";
 
 export const useUserStore = defineStore("userStore", () => {
   const isLoggedIn = ref(false);
@@ -28,8 +29,8 @@ export const useUserStore = defineStore("userStore", () => {
       isValidToken.value = true;
     } catch (error) {
       console.error("로그인 중 오류가 발생했습니다.", error);
+      alert("아이디 또는 비밀번호를 확인해주세요.")
       isLoggedIn.value = false;
-      showLoginModal.value = false;
       isValidToken.value = false;
     }
   };

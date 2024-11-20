@@ -60,7 +60,7 @@
     <!-- Login Modal -->
     <LoginModal v-if="showLoginModal" @close="closeLoginModal" />
     <!-- Join Modal -->
-    <JoinModal v-if="showJoinModal" @close="closeJoinModal" />
+    <JoinModal v-if="showJoinModal" @close="showJoinModal = false" />
   </div>
 </template>
 <script setup>
