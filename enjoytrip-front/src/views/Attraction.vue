@@ -71,7 +71,6 @@
 
     <!-- List Section -->
     <div>
-      <h2 class="text-xl font-medium mb-4">리스트</h2>
       <div
         class="overflow-y-auto border border-gray-300 rounded-lg p-4"
         style="max-height: 300px"
@@ -87,13 +86,14 @@
           <tbody>
             <tr
               v-for="(trip, index) in tripList"
-              :key="index"
+              :key="`${trip.title}-${index}`"
               @click="moveToCenter(trip.latitude, trip.longitude)"
               class="cursor-pointer hover:bg-gray-100"
             >
               <td>
                 <img
-                  :src="trip.firstImage1 || '/assets/img/no-image.png'"
+                  :src="trip.firstImage1 || 'src/assets/img/no-img.png'"
+                  :alt="trip.title"
                   width="100"
                 />
               </td>
@@ -156,6 +156,7 @@ const locationCoordinates = {
 
 // 추천 컨텐츠 타입
 const recommendationTypes = [
+  { content_type_id: null, content_type_name: "선택" },
   { content_type_id: 12, content_type_name: "관광지" },
   { content_type_id: 14, content_type_name: "문화시설" },
   { content_type_id: 15, content_type_name: "축제공연행사" },
@@ -181,11 +182,10 @@ const selectedLocation = computed(
 );
 // 검색 결과 저장
 const tripList = ref([]);
-
+const markers = ref([]); // 마커들을 저장할 배열
 const selectedRecommendationType = ref(recommendationTypes[0]);
 const mapContainer = ref(null);
 const map = ref(null);
-const marker = ref(null);
 const initMap = () => {
   if (!mapContainer.value) {
     console.error("지도 오류!");
@@ -200,20 +200,41 @@ const initMap = () => {
   map.value = new kakao.maps.Map(mapContainer.value, options);
 
   // 마커
-  marker.value = new kakao.maps.Marker({
-    position: options.center, // 초기 중심 위치
-    map: map.value, // 지도 객체
+  // 초기 마커 생성
+  const initialMarker = new kakao.maps.Marker({
+    position: options.center,
+    map: map.value,
+    title: "초기 마커",
   });
+
+  markers.value.push(initialMarker);
 };
 
 // 지도 중심좌표 변경
 const updateMapCenter = (location) => {
   const coordinates = locationCoordinates[location];
-  if (coordinates && map.value && marker.value) {
-    const newCenter = new kakao.maps.LatLng(coordinates.lat, coordinates.lng);
-    map.value.setCenter(newCenter); // 지도 중심 변경
-    marker.value.setPosition(newCenter); // 마커 위치 변경
+  if (!coordinates || !map.value) {
+    console.error("유효하지 않은 좌표 또는 지도 객체가 없습니다.");
+    return;
   }
+
+  // 지도 중심 이동
+  const newCenter = new kakao.maps.LatLng(coordinates.lat, coordinates.lng);
+  map.value.setCenter(newCenter); // 지도 중심 변경
+
+  // 기존 마커 제거
+  markers.value.forEach((marker) => marker.setMap(null));
+  markers.value = [];
+
+  // 새 마커 추가
+  const marker = new kakao.maps.Marker({
+    position: newCenter, // 마커 위치를 새 중심 좌표로 설정
+    map: map.value, // 표시할 지도 객체
+    title: `${location} 중심 마커`, // 마커의 제목
+  });
+
+  // 새 마커 배열에 추가
+  markers.value.push(marker);
 };
 const updateCenterLocation = () => {
   if (!scrollContainer.value || locationRefs.value.length === 0) return;
@@ -271,9 +292,6 @@ const throttledScrollHandler = (() => {
 const selectLocation = (index, location) => {
   centerIndex.value = index;
   searchModel.value.selectedLocation = location.sido_code;
-  console.log(
-    `Selected Location: ${location.sido_name} (${location.sido_code})`
-  );
 
   updateMapCenter(location.sido_name); // 지도 업데이트
   scrollToCenter(index);
@@ -308,11 +326,11 @@ const searchModel = ref({
 
 const handleSearch = async () => {
   try {
-    console.log(`Search Term: ${searchModel.value.searchTerm}`);
-    console.log(`Selected Location: ${searchModel.value.selectedLocation}`);
-    console.log(
-      `Recommendation Type: ${searchModel.value.selectedRecommendationType?.content_type_id}`
-    );
+    // console.log(`Search Term: ${searchModel.value.searchTerm}`);
+    // console.log(`Selected Location: ${searchModel.value.selectedLocation}`);
+    // console.log(
+    //   `Recommendation Type: ${searchModel.value.selectedRecommendationType?.content_type_id}`
+    // );
 
     const searchTerm = searchModel.value.searchTerm.trim();
     const selectedLocation = searchModel.value.selectedLocation;
@@ -350,18 +368,65 @@ const handleSearch = async () => {
       throw new Error("올바른 검색 조건을 입력하세요.");
     }
 
-    console.log("Request URL:", `http://localhost/attraction${endpoint}`);
-    console.log("Request Data:", requestData);
-
     const response = await axios.post(
       `http://localhost/attraction${endpoint}`,
       requestData
     );
 
-    console.log("검색 결과:", response.data);
     tripList.value = response.data;
+    addMarkers();
   } catch (error) {
     console.error("검색 요청 중 오류 발생:", error);
+  }
+};
+
+const markerImageSrc =
+  "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 마커 이미지 URL
+
+const addMarkers = () => {
+  // 기존 마커 제거
+  markers.value.forEach((marker) => marker.setMap(null));
+  markers.value = [];
+
+  // 첫 번째 마커의 위치를 저장할 변수
+  let firstMarkerPosition = null;
+
+  tripList.value.forEach((trip, index) => {
+    if (!trip.latitude || !trip.longitude) return; // 유효한 좌표만 처리
+
+    // 마커 위치
+    const markerPosition = new kakao.maps.LatLng(trip.latitude, trip.longitude);
+
+    // 첫 번째 마커의 위치를 저장
+    if (index === 0) {
+      firstMarkerPosition = markerPosition;
+    }
+
+    // 마커 이미지 설정
+    const imageSize = new kakao.maps.Size(24, 35);
+    const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
+
+    // 마커 생성
+    const marker = new kakao.maps.Marker({
+      map: map.value,
+      position: markerPosition,
+      title: trip.title,
+      image: markerImage,
+    });
+
+    // 마커 클릭 이벤트 추가
+    kakao.maps.event.addListener(marker, "click", () => {
+      map.value.setCenter(markerPosition);
+      alert(`마커 클릭: ${trip.title}`);
+    });
+
+    // 새 마커를 배열에 추가
+    markers.value.push(marker);
+  });
+
+  // 첫 번째 마커의 위치로 지도 중심 이동
+  if (firstMarkerPosition) {
+    map.value.setCenter(firstMarkerPosition);
   }
 };
 
@@ -374,6 +439,7 @@ onMounted(() => {
     script.onload = () => kakao.maps.load(initMap);
     script.src =
       "http://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=80a51ca8893edecb0612a0ba5858c1ad";
+
     document.head.appendChild(script);
   }
   if (scrollContainer.value) {
