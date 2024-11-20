@@ -39,7 +39,6 @@
           v-for="type in recommendationTypes"
           :key="type.content_type_id"
           :value="type"
-          class="text-black"
         >
           {{ type.content_type_name }}
         </option>
@@ -47,18 +46,21 @@
       <p class="text-gray-700">추천해드려요</p>
     </div>
 
-    <input
-      v-model="searchModel.searchTerm"
-      type="text"
-      placeholder="검색어를 입력하세요"
-      class="max-w-[200px] px-3 py-2 border border-gray-300 rounded-md text-black"
-    />
-    <button
-      @click="handleSearch"
-      class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-    >
-      검색
-    </button>
+    <!-- Search Input -->
+    <div class="text-center mb-4">
+      <input
+        v-model="searchModel.searchTerm"
+        type="text"
+        placeholder="검색어를 입력하세요"
+        class="max-w-[200px] px-3 py-2 border border-gray-300 rounded-md text-black"
+      />
+      <button
+        @click="handleSearch"
+        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+      >
+        검색
+      </button>
+    </div>
 
     <!-- Map Section -->
     <div class="mb-8">
@@ -87,7 +89,7 @@
             <tr
               v-for="(trip, index) in tripList"
               :key="`${trip.title}-${index}`"
-              @click="moveToCenter(trip.latitude, trip.longitude)"
+              @click="moveToCenter(trip)"
               class="cursor-pointer hover:bg-gray-100"
             >
               <td>
@@ -109,7 +111,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import axios from "axios";
 import { storeToRefs } from "pinia";
 
@@ -188,9 +190,10 @@ const mapContainer = ref(null);
 const map = ref(null);
 const markerImageSrc =
   "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 마커 이미지 URL
+
 const initMap = () => {
   if (!mapContainer.value) {
-    console.error("지도 오류!");
+    console.error("mapContainer가 초기화되지 않았습니다.");
     return;
   }
 
@@ -200,21 +203,6 @@ const initMap = () => {
   };
 
   map.value = new kakao.maps.Map(mapContainer.value, options);
-
-  // 마커
-  // 초기 마커 생성
-
-  // 마커 이미지 설정
-  const imageSize = new kakao.maps.Size(24, 35);
-  const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
-  const initialMarker = new kakao.maps.Marker({
-    position: options.center,
-    map: map.value,
-    title: "초기 마커",
-    image: markerImage,
-  });
-
-  markers.value.push(initialMarker);
 };
 
 // 지도 중심좌표 변경
@@ -335,7 +323,7 @@ const scrollToCenter = (index) => {
 const searchModel = ref({
   searchTerm: "",
   selectedLocation: 4,
-  selectedRecommendationType: null,
+  selectedRecommendationType: recommendationTypes[0],
 });
 
 const handleSearch = async () => {
@@ -435,10 +423,10 @@ const addMarkers = () => {
     const infowindowContent = `
   <div style="padding: 10px; max-width: 200px; word-wrap: break-word; text-align: center; overflow: hidden; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); border-radius: 8px; font-family: Arial, sans-serif;">
     <div style="margin-bottom: 10px;">
-      <img 
-        src="${trip.firstImage1 || "src/assets/img/no-img.png"}" 
-        alt="${trip.title}" 
-        style="width: 100%; max-width: 150px; height: auto; border-radius: 4px;" 
+      <img
+        src="${trip.firstImage1 || "src/assets/img/no-img.png"}"
+        alt="${trip.title}"
+        style="width: 100%; max-width: 150px; height: auto; border-radius: 4px;"
       />
     </div>
     <strong style="font-size: 14px; color: #333;">${trip.title}</strong><br>
@@ -473,6 +461,100 @@ const addMarkers = () => {
     map.value.setCenter(firstMarkerPosition);
   }
 };
+
+const createMarkerWithInfoWindow = (trip) => {
+  if (!trip.latitude || !trip.longitude || !map.value) {
+    console.error("유효하지 않은 좌표 또는 지도 객체가 없습니다.");
+    return null;
+  }
+
+  // 마커 위치 설정
+  const markerPosition = new kakao.maps.LatLng(trip.latitude, trip.longitude);
+
+  // 마커 이미지 설정
+  const imageSize = new kakao.maps.Size(24, 35);
+  const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
+
+  // 마커 생성
+  const newMarker = new kakao.maps.Marker({
+    position: markerPosition,
+    map: map.value,
+    title: trip.title,
+    image: markerImage,
+  });
+
+  // 인포윈도우 내용 설정
+  const infowindowContent = `
+    <div style="padding: 10px; max-width: 200px; word-wrap: break-word; text-align: center; overflow: hidden; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); border-radius: 8px; font-family: Arial, sans-serif;">
+      <div style="margin-bottom: 10px;">
+        <img
+          src="${trip.firstImage1 || "src/assets/img/no-img.png"}"
+          alt="${trip.title}"
+          style="width: 100%; max-width: 150px; height: auto; border-radius: 4px;"
+        />
+      </div>
+      <strong style="font-size: 14px; color: #333;">${trip.title}</strong><br>
+      <span style="font-size: 11px; color: #777; display: block; margin-top: 5px;">
+        ${trip.addr1 || ""} ${trip.addr2 || ""}
+      </span>
+    </div>
+  `;
+  const infowindow = new kakao.maps.InfoWindow({
+    content: infowindowContent,
+    removable: true,
+  });
+
+  // 인포윈도우 열기
+  infowindow.open(map.value, newMarker);
+
+  // 마커 클릭 이벤트 추가
+  kakao.maps.event.addListener(newMarker, "click", () => {
+    // 모든 기존 인포윈도우 닫기
+    markers.value.forEach((item) => item.infowindow.close());
+
+    // 현재 클릭된 마커의 인포윈도우 열기
+    infowindow.open(map.value, newMarker);
+  });
+
+  return { marker: newMarker, infowindow };
+};
+
+const moveToCenter = (trip) => {
+  if (!trip.latitude || !trip.longitude || !map.value) {
+    console.error("유효하지 않은 좌표 또는 지도 객체가 없습니다.");
+    return;
+  }
+
+  // 지도 중심 이동
+  const newCenter = new kakao.maps.LatLng(trip.latitude, trip.longitude);
+  map.value.setCenter(newCenter);
+
+  // 기존 마커 제거
+  if (markers.value && Array.isArray(markers.value)) {
+    markers.value.forEach((item) => {
+      if (item && item.marker) {
+        item.marker.setMap(null);
+      }
+    });
+  }
+  markers.value = []; // 기존 마커 초기화
+
+  // 새로운 마커와 인포윈도우 추가
+  const newMarkerWithInfo = createMarkerWithInfoWindow(trip);
+  if (newMarkerWithInfo) {
+    markers.value.push(newMarkerWithInfo);
+  }
+};
+
+watch(
+  () => searchModel.value.selectedRecommendationType,
+  (newValue, oldValue) => {
+    if (newValue && newValue.content_type_id !== oldValue?.content_type_id) {
+      handleSearch();
+    }
+  },
+  { deep: true } // 객체 변경을 감지하기 위해 깊은 감시 설정
+);
 
 onMounted(() => {
   if (window.kakao && window.kakao.maps) {
