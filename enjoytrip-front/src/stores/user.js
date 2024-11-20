@@ -4,12 +4,17 @@ import { defineStore } from "pinia";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import { AlertTriangle } from "lucide-vue-next";
-
 export const useUserStore = defineStore("userStore", () => {
+
+  const router = useRouter();
   const isLoggedIn = ref(false);
   const showLoginModal = ref(false);
   const isValidToken = ref(false);
   const userInfo = ref(null);
+  const setUserInfo = (newUserInfo) => {
+    console.log(newUserInfo)
+    userInfo.value = newUserInfo;
+  };
   const userLogin = async (loginUser) => {
     try {
       console.log(loginUser);
@@ -47,6 +52,7 @@ export const useUserStore = defineStore("userStore", () => {
         isLoggedIn.value = false;
         userInfo.value = null;
         isValidToken.value = false;
+        router.push("/");
       } else {
         console.log("유저 정보 없음!")
       }
@@ -144,6 +150,7 @@ export const useUserStore = defineStore("userStore", () => {
     userInfo,
     userLogin,
     userLogout,
-    getUserInfo
+    getUserInfo,
+    setUserInfo
   };
 });

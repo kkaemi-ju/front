@@ -19,7 +19,8 @@ const onlyAuthUser = async (to, from, next) => {
     await getUserInfo(token);
   }
   if (!isValidToken.value || userInfo.value === null) {
-    next({ name: "user-login" });
+    alert("로그인 후 이용하실 수 있습니다.")
+    next({ name: "main" });
   } else {
     next();
   }
@@ -48,7 +49,12 @@ const router = createRouter({
     },
     { path: "/boardwrite", name:"boardwrite", component:BoardWrite},
     { path: "/boarddetail", name:"boarddetail", component:BoardDetail},
-    { path: "/mypage", name: "mypage", component: Mypage },
+    {
+      path: "/mypage",
+      name: "mypage",
+      beforeEnter:onlyAuthUser,
+      component: Mypage
+    },
     { path: "/attractions", name: "attractions", component: Attractions },
   ],
 });

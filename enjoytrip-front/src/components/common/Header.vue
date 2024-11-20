@@ -23,7 +23,7 @@
           <!-- 마이페이지 (로그인 상태에서만 표시) -->
           <router-link
             v-if="isLoggedIn"
-            to="/Mypage"
+            to="/mypage"
             class="text-sm font-medium text-[#00712D] hover:text-[#FF9100] transition-colors"
           >
             마이페이지
