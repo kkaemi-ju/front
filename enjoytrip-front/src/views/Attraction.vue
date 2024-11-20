@@ -5,7 +5,7 @@
       <div class="flex space-x-6 items-center" ref="locationsContainer">
         <div
           v-for="(location, index) in locations"
-          :key="`${location}-${index}`"
+          :key="`${location.sido_name}-${index}`"
           :ref="
             (el) => {
               if (el) locationRefs[index] = el;
@@ -13,7 +13,7 @@
           "
           class="flex flex-col items-center transition-all duration-300 ease-in-out cursor-pointer mt-[30px]"
           :class="{ 'scale-105': index === centerIndex }"
-          @click="selectLocation(index)"
+          @click="selectLocation(index, location)"
         >
           <div
             class="rounded-full flex items-center justify-center mb-2 text-white transition-all duration-300"
@@ -22,61 +22,148 @@
               'w-20 h-20 bg-[#00712D]': index !== centerIndex,
             }"
           >
-            <span class="text-sm text-center">{{ location }}</span>
+            <span class="text-sm text-center">{{ location.sido_name }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Selected Location -->
-    <div v-if="selectedLocation" class="text-center my-8">
-      <p class="text-lg font-semibold text-gray-800">
-        선택된 지역: {{ selectedLocation }}
-      </p>
+    <!-- Recommendation Text with Dropdown -->
+    <div class="text-center my-8 flex items-center justify-center space-x-2">
+      <p class="text-gray-700">이 지역의</p>
+      <select
+        v-model="searchModel.selectedRecommendationType"
+        class="w-[180px] text-black h-[40px] rounded border border-gray-300 flex-shrink-0"
+      >
+        <option
+          v-for="type in recommendationTypes"
+          :key="type.content_type_id"
+          :value="type"
+          class="text-black"
+        >
+          {{ type.content_type_name }}
+        </option>
+      </select>
+      <p class="text-gray-700">추천해드려요</p>
     </div>
 
-    <!-- Recommendation Text -->
-    <div class="text-center my-8">
-      <p class="text-gray-700">
-        이 지역의 맛집, 숙소, 쇼핑, 숙박 등등을 추천해드려요
-      </p>
-    </div>
+    <input
+      v-model="searchModel.searchTerm"
+      type="text"
+      placeholder="검색어를 입력하세요"
+      class="max-w-[200px] px-3 py-2 border border-gray-300 rounded-md text-black"
+    />
+    <button
+      @click="handleSearch"
+      class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+    >
+      검색
+    </button>
 
     <!-- Map Section -->
     <div class="mb-8">
-      <h2 class="text-xl font-medium mb-4">지도</h2>
-      <div class="w-full h-64 bg-gray-200 rounded-lg"></div>
+      <h2 class="text-xl font-medium mb-4 text-black">지도</h2>
+      <div
+        ref="mapContainer"
+        class="w-full h-[600px] bg-gray-200 rounded-lg"
+      ></div>
     </div>
 
     <!-- List Section -->
     <div>
       <h2 class="text-xl font-medium mb-4">리스트</h2>
-      <div class="w-full h-64 bg-gray-200 rounded-lg"></div>
+      <div
+        class="overflow-y-auto border border-gray-300 rounded-lg p-4"
+        style="max-height: 300px"
+      >
+        <table class="table table-striped w-full" v-if="tripList.length > 0">
+          <thead>
+            <tr>
+              <th>대표이미지</th>
+              <th>관광지명</th>
+              <th>주소</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(trip, index) in tripList"
+              :key="index"
+              @click="moveToCenter(trip.latitude, trip.longitude)"
+              class="cursor-pointer hover:bg-gray-100"
+            >
+              <td>
+                <img
+                  :src="trip.firstImage1 || '/assets/img/no-image.png'"
+                  width="100"
+                />
+              </td>
+              <td>{{ trip.title }}</td>
+              <td>{{ trip.addr1 }} {{ trip.addr2 }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="text-center text-gray-600">검색 결과가 없습니다.</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from "vue";
+import axios from "axios";
+import { storeToRefs } from "pinia";
 
 const originalLocations = [
-  "서울",
-  "인천",
-  "대전",
-  "대구",
-  "광주",
-  "부산",
-  "울산",
-  "세종특별자치시",
-  "경기도",
-  "강원특별자치도",
-  "충청북도",
-  "충청남도",
-  "경상북도",
-  "경상남도",
-  "전북특별자치도",
-  "전라남도",
-  "제주도",
+  { sido_code: 1, sido_name: "서울" },
+  { sido_code: 2, sido_name: "인천" },
+  { sido_code: 3, sido_name: "대전" },
+  { sido_code: 4, sido_name: "대구" },
+  { sido_code: 5, sido_name: "광주" },
+  { sido_code: 6, sido_name: "부산" },
+  { sido_code: 7, sido_name: "울산" },
+  { sido_code: 8, sido_name: "세종특별자치시" },
+  { sido_code: 31, sido_name: "경기도" },
+  { sido_code: 32, sido_name: "강원특별자치도" },
+  { sido_code: 33, sido_name: "충청북도" },
+  { sido_code: 34, sido_name: "충청남도" },
+  { sido_code: 35, sido_name: "경상북도" },
+  { sido_code: 36, sido_name: "경상남도" },
+  { sido_code: 37, sido_name: "전북특별자치도" },
+  { sido_code: 38, sido_name: "전라남도" },
+  { sido_code: 39, sido_name: "제주도" },
+];
+
+// 지역별 중심좌표
+const locationCoordinates = {
+  서울: { lat: 37.5665, lng: 126.978 },
+  인천: { lat: 37.4563, lng: 126.7052 },
+  대전: { lat: 36.3504, lng: 127.3845 },
+  대구: { lat: 35.8714, lng: 128.6014 },
+  광주: { lat: 35.1595, lng: 126.8526 },
+  부산: { lat: 35.1796, lng: 129.0756 },
+  울산: { lat: 35.5395, lng: 129.3114 },
+  세종특별자치시: { lat: 36.4803, lng: 127.289 },
+  경기도: { lat: 37.4138, lng: 127.5183 },
+  강원특별자치도: { lat: 37.8228, lng: 128.1555 },
+  충청북도: { lat: 36.6356, lng: 127.4917 },
+  충청남도: { lat: 36.5184, lng: 126.8 },
+  경상북도: { lat: 36.4919, lng: 128.8886 },
+  경상남도: { lat: 35.4606, lng: 128.2132 },
+  전북특별자치도: { lat: 35.7175, lng: 127.153 },
+  전라남도: { lat: 34.8679, lng: 126.991 },
+  제주도: { lat: 33.4996, lng: 126.5312 },
+};
+
+// 추천 컨텐츠 타입
+const recommendationTypes = [
+  { content_type_id: 12, content_type_name: "관광지" },
+  { content_type_id: 14, content_type_name: "문화시설" },
+  { content_type_id: 15, content_type_name: "축제공연행사" },
+  { content_type_id: 25, content_type_name: "여행코스" },
+  { content_type_id: 28, content_type_name: "레포츠" },
+  { content_type_id: 32, content_type_name: "숙박" },
+  { content_type_id: 38, content_type_name: "쇼핑" },
+  { content_type_id: 39, content_type_name: "음식점" },
 ];
 
 const locations = ref([
@@ -92,7 +179,42 @@ const centerIndex = ref(originalLocations.length);
 const selectedLocation = computed(
   () => originalLocations[centerIndex.value % originalLocations.length]
 );
+// 검색 결과 저장
+const tripList = ref([]);
 
+const selectedRecommendationType = ref(recommendationTypes[0]);
+const mapContainer = ref(null);
+const map = ref(null);
+const marker = ref(null);
+const initMap = () => {
+  if (!mapContainer.value) {
+    console.error("지도 오류!");
+    return;
+  }
+
+  const options = {
+    center: new kakao.maps.LatLng(33.450701, 126.570667), // Default center
+    level: 3, // Zoom level
+  };
+
+  map.value = new kakao.maps.Map(mapContainer.value, options);
+
+  // 마커
+  marker.value = new kakao.maps.Marker({
+    position: options.center, // 초기 중심 위치
+    map: map.value, // 지도 객체
+  });
+};
+
+// 지도 중심좌표 변경
+const updateMapCenter = (location) => {
+  const coordinates = locationCoordinates[location];
+  if (coordinates && map.value && marker.value) {
+    const newCenter = new kakao.maps.LatLng(coordinates.lat, coordinates.lng);
+    map.value.setCenter(newCenter); // 지도 중심 변경
+    marker.value.setPosition(newCenter); // 마커 위치 변경
+  }
+};
 const updateCenterLocation = () => {
   if (!scrollContainer.value || locationRefs.value.length === 0) return;
 
@@ -146,9 +268,18 @@ const throttledScrollHandler = (() => {
   };
 })();
 
-const selectLocation = (index) => {
+const selectLocation = (index, location) => {
   centerIndex.value = index;
+  searchModel.value.selectedLocation = location.sido_code;
+  console.log(
+    `Selected Location: ${location.sido_name} (${location.sido_code})`
+  );
+
+  updateMapCenter(location.sido_name); // 지도 업데이트
   scrollToCenter(index);
+
+  // 지도 검색
+  handleSearch();
 };
 
 const scrollToCenter = (index) => {
@@ -169,7 +300,82 @@ const scrollToCenter = (index) => {
   });
 };
 
+const searchModel = ref({
+  searchTerm: "",
+  selectedLocation: 4,
+  selectedRecommendationType: null,
+});
+
+const handleSearch = async () => {
+  try {
+    console.log(`Search Term: ${searchModel.value.searchTerm}`);
+    console.log(`Selected Location: ${searchModel.value.selectedLocation}`);
+    console.log(
+      `Recommendation Type: ${searchModel.value.selectedRecommendationType?.content_type_id}`
+    );
+
+    const searchTerm = searchModel.value.searchTerm.trim();
+    const selectedLocation = searchModel.value.selectedLocation;
+    const selectedRecommendationType =
+      searchModel.value.selectedRecommendationType?.content_type_id || null; // 수정
+
+    let endpoint = "";
+    let requestData = {};
+
+    if (searchTerm && selectedLocation && selectedRecommendationType) {
+      endpoint = "/sidotypetitlesearch";
+      requestData = {
+        areaCode: selectedLocation,
+        contentTypeId: selectedRecommendationType,
+        keyword: searchTerm,
+      };
+    } else if (searchTerm && selectedLocation) {
+      endpoint = "/sidotitlesearch";
+      requestData = {
+        areaCode: selectedLocation,
+        keyword: searchTerm,
+      };
+    } else if (selectedLocation && selectedRecommendationType) {
+      endpoint = "/sidotypesearch";
+      requestData = {
+        areaCode: selectedLocation,
+        contentTypeId: selectedRecommendationType,
+      };
+    } else if (selectedLocation) {
+      endpoint = "/sidosearch";
+      requestData = {
+        areaCode: selectedLocation,
+      };
+    } else {
+      throw new Error("올바른 검색 조건을 입력하세요.");
+    }
+
+    console.log("Request URL:", `http://localhost/attraction${endpoint}`);
+    console.log("Request Data:", requestData);
+
+    const response = await axios.post(
+      `http://localhost/attraction${endpoint}`,
+      requestData
+    );
+
+    console.log("검색 결과:", response.data);
+    tripList.value = response.data;
+  } catch (error) {
+    console.error("검색 요청 중 오류 발생:", error);
+  }
+};
+
 onMounted(() => {
+  if (window.kakao && window.kakao.maps) {
+    initMap();
+  } else {
+    const script = document.createElement("script");
+    /* global kakao */
+    script.onload = () => kakao.maps.load(initMap);
+    script.src =
+      "http://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=80a51ca8893edecb0612a0ba5858c1ad";
+    document.head.appendChild(script);
+  }
   if (scrollContainer.value) {
     scrollContainer.value.addEventListener("scroll", throttledScrollHandler, {
       passive: true,
@@ -236,5 +442,8 @@ onUnmounted(() => {
 
 .scale-105 {
   transform: scale(1.05);
+}
+#mapContainer {
+  height: 1500px;
 }
 </style>
