@@ -65,7 +65,7 @@
       <h2 class="text-xl font-medium mb-4 text-black">지도</h2>
       <div
         ref="mapContainer"
-        class="w-full h-[600px] bg-gray-200 rounded-lg"
+        class="w-full h-[500px] bg-gray-200 rounded-lg"
       ></div>
     </div>
 
@@ -186,6 +186,8 @@ const markers = ref([]); // 마커들을 저장할 배열
 const selectedRecommendationType = ref(recommendationTypes[0]);
 const mapContainer = ref(null);
 const map = ref(null);
+const markerImageSrc =
+  "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 마커 이미지 URL
 const initMap = () => {
   if (!mapContainer.value) {
     console.error("지도 오류!");
@@ -194,17 +196,22 @@ const initMap = () => {
 
   const options = {
     center: new kakao.maps.LatLng(33.450701, 126.570667), // Default center
-    level: 3, // Zoom level
+    level: 2, // Zoom level
   };
 
   map.value = new kakao.maps.Map(mapContainer.value, options);
 
   // 마커
   // 초기 마커 생성
+
+  // 마커 이미지 설정
+  const imageSize = new kakao.maps.Size(24, 35);
+  const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
   const initialMarker = new kakao.maps.Marker({
     position: options.center,
     map: map.value,
     title: "초기 마커",
+    image: markerImage,
   });
 
   markers.value.push(initialMarker);
@@ -223,19 +230,26 @@ const updateMapCenter = (location) => {
   map.value.setCenter(newCenter); // 지도 중심 변경
 
   // 기존 마커 제거
-  markers.value.forEach((marker) => marker.setMap(null));
+  if (markers.value && Array.isArray(markers.value)) {
+    markers.value.forEach((item) => {
+      if (item && item.marker) {
+        item.marker.setMap(null); // 마커가 존재하면 지도에서 제거
+      }
+    });
+  }
   markers.value = [];
 
   // 새 마커 추가
-  const marker = new kakao.maps.Marker({
+  const newMarker = new kakao.maps.Marker({
     position: newCenter, // 마커 위치를 새 중심 좌표로 설정
     map: map.value, // 표시할 지도 객체
     title: `${location} 중심 마커`, // 마커의 제목
   });
 
   // 새 마커 배열에 추가
-  markers.value.push(marker);
+  markers.value.push({ marker: newMarker });
 };
+
 const updateCenterLocation = () => {
   if (!scrollContainer.value || locationRefs.value.length === 0) return;
 
@@ -380,13 +394,16 @@ const handleSearch = async () => {
   }
 };
 
-const markerImageSrc =
-  "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 마커 이미지 URL
-
 const addMarkers = () => {
   // 기존 마커 제거
-  markers.value.forEach((marker) => marker.setMap(null));
-  markers.value = [];
+  if (markers.value && Array.isArray(markers.value)) {
+    markers.value.forEach((item) => {
+      if (item && item.marker) {
+        item.marker.setMap(null); // 기존 마커를 지도에서 제거
+      }
+    });
+  }
+  markers.value = []; // 기존 마커 목록 초기화
 
   // 첫 번째 마커의 위치를 저장할 변수
   let firstMarkerPosition = null;
@@ -414,14 +431,41 @@ const addMarkers = () => {
       image: markerImage,
     });
 
-    // 마커 클릭 이벤트 추가
-    kakao.maps.event.addListener(marker, "click", () => {
-      map.value.setCenter(markerPosition);
-      alert(`마커 클릭: ${trip.title}`);
+    // 인포윈도우 내용
+    const infowindowContent = `
+  <div style="padding: 10px; max-width: 200px; word-wrap: break-word; text-align: center; overflow: hidden; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); border-radius: 8px; font-family: Arial, sans-serif;">
+    <div style="margin-bottom: 10px;">
+      <img 
+        src="${trip.firstImage1 || "src/assets/img/no-img.png"}" 
+        alt="${trip.title}" 
+        style="width: 100%; max-width: 150px; height: auto; border-radius: 4px;" 
+      />
+    </div>
+    <strong style="font-size: 14px; color: #333;">${trip.title}</strong><br>
+    <span style="font-size: 11px; color: #777; display: block; margin-top: 5px;">
+      ${trip.addr1 || ""} ${trip.addr2 || ""}
+    </span>
+  </div>
+`;
+    const infowindow = new kakao.maps.InfoWindow({
+      content: infowindowContent,
+      removable: true,
     });
 
-    // 새 마커를 배열에 추가
-    markers.value.push(marker);
+    // 마커 클릭 이벤트 추가
+    kakao.maps.event.addListener(marker, "click", () => {
+      // 모든 기존 인포윈도우 닫기
+      markers.value.forEach((item) => item.infowindow.close());
+
+      // 현재 클릭된 마커의 인포윈도우 열기
+      infowindow.open(map.value, marker);
+    });
+
+    // 새 마커와 인포윈도우를 배열에 추가
+    markers.value.push({
+      marker,
+      infowindow,
+    });
   });
 
   // 첫 번째 마커의 위치로 지도 중심 이동
