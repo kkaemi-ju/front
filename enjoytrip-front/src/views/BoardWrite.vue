@@ -2,7 +2,10 @@
   <div class="min-h-screen bg-[#FFFBE6]/30 py-8">
     <div class="container mx-auto px-4 max-w-4xl">
       <!-- 헤더 -->
-      <button class="mb-6 flex items-center text-[#00712D] hover:underline">
+      <button
+        class="mb-6 flex items-center text-[#00712D] hover:underline"
+        @click="goBackToBoard"
+      >
         <ChevronLeft class="w-5 h-5 mr-1" />
         목록으로 돌아가기
       </button>
@@ -137,9 +140,10 @@ import { ChevronLeft } from "lucide-vue-next";
 import { useUserStore } from "@/stores/user";
 import { storeToRefs } from "pinia";
 import axios from "axios";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
+const router = useRouter();
 const boardId = ref("");
 const { userInfo } = useUserStore(); // Pinia 스토어에서 직접 가져오기
 console.log("userInfo: ", userInfo);
@@ -206,37 +210,46 @@ const submitPost = async () => {
 
     const boardId = response.data.boardId;
 
-    const fileDtos = uploadedImages.value.map((image) => ({
-      boardId: boardId,
-      fileUrl: image,
-    }));
+    const fileDtos = uploadedImages.value.length
+      ? uploadedImages.value.map((image) => ({
+          boardId: boardId,
+          fileUrl: image,
+        }))
+      : null;
 
-    const fileResponse = await axios.post(
-      "http://localhost/board/fileUpload",
-      fileDtos,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
+    if (fileDtos && fileDtos.length > 0) {
+      const fileResponse = await axios.post(
+        "http://localhost/board/fileUpload",
+        fileDtos,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (fileResponse.status === 201) {
+        console.log("파일 업로드 성공!!");
+      } else {
+        console.error("파일 업로드 실패", fileResponse.statusText);
       }
-    );
-
-    if (fileResponse.status === 201) {
-      console.log("파일 업로드 성공!!");
-      alert(fileResponse.data.message || "게시글이 작성되었습니다!");
-    } else {
-      console.error("파일 업로드 실패", fileResponse.statusText);
     }
+    alert("게시글이 작성되었습니다!");
+    router.push({ path: "/board", query: { boardId: postData.boardId } });
   } catch (error) {
     // 오류 처리
     if (error.response) {
       console.error("서버 응답 오류:", error.response.data);
-      alert(error.response.data.error || "게시글 작성 중 오류 발생");
+      // alert(error.response.data.error || "게시글 작성 중 오류 발생");
     } else {
       console.error("네트워크 오류:", error.message);
-      alert("네트워크 오류가 발생했습니다.");
+      // alert("네트워크 오류가 발생했습니다.");
     }
   }
+};
+
+const goBackToBoard = () => {
+  router.push({ path: "/board", query: { boardId: route.query.boardId } });
 };
 
 onMounted(() => {
