@@ -4,15 +4,25 @@
       <!-- 헤더 -->
       <button
         class="mb-6 flex items-center text-[#00712D] hover:underline"
-        @click="goBackToBoard"
+        @click="
+          route.query.modify === 'true'
+            ? goBackToDetail('boarddetail')
+            : goBackToBoard()
+        "
       >
         <ChevronLeft class="w-5 h-5 mr-1" />
-        목록으로 돌아가기
+        {{
+          route.query.modify === "true"
+            ? "이전으로 돌아가기"
+            : "목록으로 돌아가기"
+        }}
       </button>
 
       <!-- 글 작성 섹션 -->
       <section class="bg-white rounded-lg shadow-md p-6">
-        <h1 class="text-3xl font-bold text-[#00712D] mb-6">게시글 작성</h1>
+        <h1 class="text-3xl font-bold text-[#00712D] mb-6">
+          {{ route.query.modify === "true" ? "게시글 수정" : "게시글 작성" }}
+        </h1>
         <!-- 작성자 -->
         <div class="mb-6">
           <label
@@ -105,10 +115,12 @@
         <!-- 제출 버튼 -->
         <div class="flex justify-end">
           <button
-            @click="submitPost"
+            @click="
+              route.query.modify === 'true' ? submitModify() : submitPost()
+            "
             class="px-6 py-3 bg-[#00712D] text-white text-lg rounded-md hover:bg-[#00712D]/90 transition-colors"
           >
-            게시글 작성
+            {{ route.query.modify === "true" ? "수정 완료" : "게시글 작성" }}
           </button>
         </div>
       </section>
@@ -153,6 +165,7 @@ const content = ref("");
 const uploadedImages = ref([]); // 여러 이미지를 저장
 const isImageModalOpen = ref(false);
 const selectedImage = ref(null);
+const boardType = ref("");
 
 const handleFileUpload = (event) => {
   const files = Array.from(event.target.files);
@@ -190,7 +203,7 @@ const submitPost = async () => {
     userId: userInfo.userId,
     title: title.value,
     content: content.value,
-    boardId: boardId.value,
+    boardId: boardId.value, // 게시판 타입
   };
 
   // fileDto: uploadedImages.value.map((image) => ({
@@ -210,6 +223,7 @@ const submitPost = async () => {
 
     const boardId = response.data.boardId;
 
+    // 사진 저장
     const fileDtos = uploadedImages.value.length
       ? uploadedImages.value.map((image) => ({
           boardId: boardId,
@@ -248,13 +262,111 @@ const submitPost = async () => {
   }
 };
 
+const submitModify = async () => {
+  if (!title.value.trim() || !content.value.trim()) {
+    alert("제목과 내용을 입력해주세요!");
+    return;
+  }
+
+  // 게시글 내용 설정
+  const postData = {
+    userId: userInfo.userId,
+    title: title.value,
+    content: content.value,
+    boardId: boardId.value,
+  };
+
+  articleno = route.query.boardId;
+  const response = await axios.put(
+    `http://localhost/board/${articleno}`,
+    postData
+  );
+  console.log(response.data);
+  if (response.status === 200) {
+    console.log("성공!");
+  } else {
+    console.error("수정 실패");
+  }
+};
+
+// 게시판으로 돌아가기
 const goBackToBoard = () => {
   router.push({ path: "/board", query: { boardId: route.query.boardId } });
 };
 
+// 상세 글 페이지로 돌아가기(수정모드)
+const goBackToDetail = (page) => {
+  const confirmResult = confirm("수정을 끝내고 돌아가시겠습니까?");
+  if (confirmResult) {
+    router.push({
+      name: page,
+      query: { boardId: boardType.value },
+      params: { id: boardId.value },
+    });
+  }
+};
+
+const article = ref();
+// 글 수정
+const modifyArticle = async () => {
+  // 이전 데이터 가져와서 설정
+  try {
+    const boardId = route.query.boardId;
+    const response = await axios.get(`http://localhost/board/${boardId}`);
+    article.value = response.data;
+    title.value = article.value.title; // 제목 설정
+    content.value = article.value.content; // 내용 설정
+
+    if (response.status === 200) {
+      console.log("게시글 데이터 가져오기 성공:", response.data);
+    } else {
+      console.error("게시글 못 불러옴:", response.statusText);
+    }
+    fetchImages();
+  } catch (error) {
+    console.error("오류남!!");
+  }
+};
+
+// 사진 가져오기
+const fetchImages = async () => {
+  try {
+    const boardId = route.query.boardId;
+
+    // 이미지 파일 목록 가져오기
+    const fileResponse = await axios.get(
+      `http://localhost/board/loadfile/${boardId}`
+    );
+
+    if (fileResponse.status === 200) {
+      // API에서 반환된 로컬 경로를 브라우저에서 접근 가능한 URL로 변환
+      const imageUrls = fileResponse.data.map((filePath) => {
+        // 파일명 추출
+        const fileName = filePath.split("/").pop();
+        // 서빙 가능한 URL로 변환
+        return `http://localhost/board/file/${boardId}/${fileName}`;
+      });
+
+      // 받아온 이미지를 uploadedImages에 추가
+      uploadedImages.value = imageUrls;
+
+      console.log("이미지 경로 로드 성공:", uploadedImages.value);
+    } else {
+      console.error("이미지 경로 로드 실패:", fileResponse.statusText);
+    }
+  } catch (error) {
+    console.error("이미지 로드 중 오류 발생", error.message);
+  }
+};
+
 onMounted(() => {
   boardId.value = route.query.boardId;
-  console.log(boardId.value);
+  boardType.value = route.query.boardType;
+
+  if (route.query.modify === "true") {
+    // 게시글 수정
+    modifyArticle();
+  }
 });
 </script>
 
