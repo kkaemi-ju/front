@@ -181,31 +181,30 @@
                     <ChevronRightIcon class="h-5 w-5 text-gray-600" />
                     </button>
                 </div>
-                <ul class="space-y-4">
-                    <li
-                    v-for="place in filteredPlaces"
-                    :key="place.id"
-                    class="flex items-center justify-between p-2 border rounded-md"
-                    >
-                    <div class="flex items-center">
-                        <img :src="place.image" alt="" class="w-16 h-16 rounded-md mr-4" />
+                <div class="h-screen flex flex-col p-4 bg-gray-100">
+                    <div class="flex-1 overflow-y-auto">
+                    <div v-for="item in itemss" :key="item.id" class="flex items-center mb-4 p-4 bg-white rounded-lg shadow">
+                        <img :src="item.image" alt="Item image" class="w-20 h-20 rounded-lg object-cover mr-4" />
+                        <div class="flex-1">
+                        <div class="flex items-center mb-1">
+                            <h2 class="font-bold">{{ item.title }}</h2>
+                        </div>
+                        <p class="text-gray-600">{{ item.description }}</p>
+                        </div>
                         <div>
-                        <h3 class="font-bold">{{ place.name }}</h3>
-                        <p class="text-sm text-gray-500">{{ place.address }}</p>
+                        <button
+                            @click="toggleSelected(item)"
+                            :class="item.selected ? 'bg-pink-500 text-white' : 'bg-gray-200 text-gray-500'"
+                            class="p-2 rounded-full transition-colors duration-200"
+                        >
+                            <CheckIcon v-if="item.selected" class="w-4 h-4" />
+                            <PlusIcon v-else class="w-4 h-4" />
+                        </button>
                         </div>
                     </div>
-                    <button
-                        @click="toggleSelection(place.id)"
-                        :class="[
-                        'w-8 h-8 flex items-center justify-center rounded-full',
-                        place.selected ? 'bg-blue-200' : 'bg-gray-200'
-                        ]"
-                    >
-                        <CheckIcon v-if="place.selected" class="h-5 w-5 text-blue-600" />
-                        <PlusIcon v-else class="h-5 w-5 text-gray-600" />
-                    </button>
-                    </li>
-                </ul>
+                    </div>
+                </div>
+
             </div>
 
         </div>
@@ -217,15 +216,34 @@
         <!-- List Sidebar for Step 2 -->
         <div
           v-if="currentStep === 2"
-          :class="['transition-all duration-300', sidebarOpen ? 'w-[300px]' : 'w-0']"
+          :class="['transition-all duration-300', sidebarOpen ? 'w-[350px]' : 'w-0']"
           class="bg-white border-r overflow-hidden"
         >
-          <div class="p-4">
-            <h3 class="text-lg font-medium mb-4">리스트</h3>
-            <div class="text-sm text-gray-500">
-              리스트 내용이 들어갈 공간
-            </div>
+        <div class="h-screen flex flex-col p-4 bg-gray-100">
+    <h1 class="text-2xl font-bold mb-4">제주도 여행지</h1>
+    <div class="flex-1 overflow-y-auto">
+      <TransitionGroup name="list" tag="div">
+        <div v-for="(item, index) in items" :key="item.id" class="flex items-center mb-4 p-4 bg-white rounded-lg shadow">
+          <img :src="item.image" alt="Item image" class="w-20 h-20 rounded-lg object-cover mr-4" />
+          <div class="flex-1">
+            <h2 class="font-bold text-lg">{{ item.title }}</h2>
+            <p class="text-gray-600">{{ item.description }}</p>
           </div>
+          <div class="flex flex-col items-center space-y-2 ml-4">
+            <button @click="moveItem(index, -1)" :disabled="index === 0" class="p-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">
+              <ChevronUpIcon class="w-4 h-4" />
+            </button>
+            <button @click="moveItem(index, 1)" :disabled="index === items.length - 1" class="p-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">
+              <ChevronDownIcon class="w-4 h-4" />
+            </button>
+          </div>
+          <button @click="removeItem(item.id)" class="ml-2 text-gray-500 hover:text-red-500">
+            <TrashIcon class="w-5 h-5" />
+          </button>
+        </div>
+      </TransitionGroup>
+    </div>
+  </div>
         </div>
 
         <!-- Collapse Button -->
@@ -236,7 +254,7 @@
             { 'left-0': !sidebarOpen }
         ]"
         :style="{
-            left: sidebarOpen ? (currentStep === 2 ? '800px' : '500px') : '0px',
+            left: sidebarOpen ? (currentStep === 2 ? '850px' : '500px') : '0px',
              // 항상 부모 요소의 가운데에 위치
 
         }"
@@ -256,7 +274,7 @@
   </template>
  <script setup>
  import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
- import { ChevronLeftIcon, ChevronRightIcon,SearchIcon, CheckIcon, PlusIcon } from "lucide-vue-next";
+ import { ChevronLeftIcon, ChevronRightIcon,SearchIcon, CheckIcon, PlusIcon, TrashIcon,ChevronUpIcon, ChevronDownIcon  } from "lucide-vue-next";
  import Chart from "chart.js/auto";
 
  const showDatePicker = ref(false);
@@ -273,15 +291,130 @@
   const searchQuery = ref('')
   const tags = ['관광지', '문화시설', '축제공연행사', '쇼핑','음식점']
 
-  const places = ref([
-    { id: 1, name: '할로나 블로우 홀 전망대', address: '8459-8481 Kalaniana\'ole Hwy, Honolulu, HI 96825, USA', image: '/placeholder.svg?height=64&width=64', selected: true },
-    { id: 2, name: '다이아몬드헤드 산', address: 'Diamond Head, Honolulu, HI 96815, USA', image: '/placeholder.svg?height=64&width=64', selected: true },
-    { id: 3, name: '이올라니 궁전', address: '364 S King St, Honolulu, HI 96813, USA', image: '/placeholder.svg?height=64&width=64', selected: false },
-    { id: 4, name: '테디스 비거 버거스 - 하와이 카이', address: '7192 Kalaniana\'ole Hwy E124, Honolulu, HI 96825, USA', image: '/placeholder.svg?height=64&width=64', selected: false },
-    { id: 5, name: 'T 갤러리아', address: '330 Royal Hawaiian Ave, Honolulu, HI 96815, USA', image: '/placeholder.svg?height=64&width=64', selected: false },
-    { id: 6, name: 'Hanauma Bay', address: 'Hanauma Bay, Hawaii 96825, USA', image: '/placeholder.svg?height=64&width=64', selected: false },
-    { id: 7, name: '와이키키 비치', address: 'Waikiki Beach, Honolulu, HI 96815, USA', image: '/placeholder.svg?height=64&width=64', selected: false },
-  ])
+  const itemss = ref([
+  {
+    id: 1,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '순풍해장국',
+    description: '13년 전통, 제주공항 근처 해장국 맛집',
+    selected: false,
+  },
+  {
+    id: 2,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '제주 해도미락 애월',
+    description: '애월 해안도로 오션뷰 갈치조림 맛집',
+    selected: false,
+  },
+  {
+    id: 3,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '성산 일출봉',
+    description: '대한민국 서귀포시 성산 일출봉',
+    selected: false,
+  },
+  {
+    id: 4,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '제주동문시장',
+    description: '대한민국 제주특별자치도 제주시',
+    selected: false,
+  },
+  {
+    id: 5,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '섭지코지',
+    description: '대한민국 제주특별자치도 서귀포시',
+    selected: false,
+  },
+  {
+    id: 6,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '우도',
+    description: '제주도 동쪽에 위치한 작은 섬',
+    selected: false,
+  },
+  {
+    id: 7,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '한라산',
+    description: '제주도의 상징, 대한민국에서 가장 높은 산',
+    selected: false,
+  },
+])
+const items = ref([
+  {
+    id: 1,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '순풍해장국',
+    description: '대한민국 제주특별자치도 제주시',
+  },
+  {
+    id: 2,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '제주 해도미락 애월',
+    description: '대한민국 제주특별자치도 제주시',
+  },
+  {
+    id: 3,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '성산 일출봉',
+    description: '대한민국 서귀포시 성산 일출봉',
+  },
+  {
+    id: 4,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '제주동문시장',
+    description: '대한민국 제주특별자치도 제주시',
+  },
+  {
+    id: 5,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '섭지코지',
+    description: '대한민국 제주특별자치도 서귀포시',
+  },
+  {
+    id: 6,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '협재해변',
+    description: '제주시 협재해변',
+  },
+  {
+    id: 7,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '우도',
+    description: '제주시 우도',
+  },
+  {
+    id: 8,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '제주오설록 티뮤지엄',
+    description: '대한민국 서귀포시',
+  },
+  {
+    id: 9,
+    image: '/placeholder.svg?height=80&width=80',
+    title: '새별오름',
+    description: '제주시 새별오름',
+  },
+])
+const toggleSelected = (item) => {
+  item.selected = !item.selected; // 선택 상태 토글
+
+  if (item.selected) {
+    // 선택된 경우, items 배열에 추가
+    items.value.push({
+      id: item.id,
+      image: item.image,
+      title: item.title,
+      description: item.description,
+    });
+  } else {
+    // 선택 해제된 경우, items 배열에서 제거
+    items.value = items.value.filter((i) => i.id !== item.id);
+  }
+};
+
 
   const selectedTag = ref("0"); // 현재 선택된 태그 저장
 
@@ -308,14 +441,6 @@
       place.name.includes(searchQuery.value)
     )
   })
-
-  const toggleSelection = (id) => {
-    const place = places.value.find(place => place.id === id)
-    if (place) {
-      place.selected = !place.selected
-    }
-  }
-
 
  const formatDateRange = computed(() => {
    if (!startDate.value || !endDate.value) return "날짜를 선택하세요";
@@ -392,6 +517,19 @@
   });
 };
 
+const removeItem = (id) => {
+  items.value = items.value.filter(item => item.id !== id)
+}
+
+const moveItem = (index, direction) => {
+  if ((direction === -1 && index > 0) || (direction === 1 && index < items.value.length - 1)) {
+    const newIndex = index + direction
+    const itemToMove = items.value[index]
+    items.value.splice(index, 1)
+    items.value.splice(newIndex, 0, itemToMove)
+  }
+}
+
 
  // Watchers
  watch([currentStep, sidebarOpen], async ([step, open]) => {
@@ -432,5 +570,18 @@
 canvas {
   width: 100% !important;
   height: auto !important;
+}
+
+.list-enter-active, .list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.list-enter-from, .list-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.list-move {
+  transition: transform 0.3s ease;
 }
 </style>

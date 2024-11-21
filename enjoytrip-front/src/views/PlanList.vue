@@ -55,7 +55,9 @@
   <script setup>
   import { ref } from 'vue'
   import { PlusIcon } from 'lucide-vue-next'
+  import { useRouter } from "vue-router";
 
+const router = useRouter();
   const plans = ref([
     {
       id: 1,
@@ -82,7 +84,9 @@
 
   const viewPlanDetails = (id) => {
     // 여행 계획 상세 보기 로직
+
     console.log(`여행 계획 ${id} 상세 보기`)
+    router.push("/plandetail");
   }
   </script>
 

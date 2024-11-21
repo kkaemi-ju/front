@@ -66,6 +66,11 @@ const router = createRouter({
       name: "planmake",
       component: () => import("../views/PlanMake.vue")
     },
+    {
+      path: "/plandetail",
+      name: "plandetail",
+      component: () => import("../views/PlanDetail.vue")
+    },
     { path: "/attractions", name: "attractions", component: Attractions },
   ],
 });
