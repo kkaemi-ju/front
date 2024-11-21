@@ -8,6 +8,7 @@ import BoardWrite from "../views/BoardWrite.vue"
 import Attractions from "@/views/Attraction.vue";
 import { storeToRefs } from "pinia";
 import {useUserStore} from "../stores/user";
+
 const onlyAuthUser = async (to, from, next) => {
   const userStore = useUserStore();
   const { userInfo, isValidToken } = storeToRefs(userStore);
@@ -59,6 +60,11 @@ const router = createRouter({
       path: "/planlist",
       name: "planlist",
       component: () => import("../views/PlanList.vue")
+    },
+    {
+      path: "/planmake",
+      name: "planmake",
+      component: () => import("../views/PlanMake.vue")
     },
     { path: "/attractions", name: "attractions", component: Attractions },
   ],

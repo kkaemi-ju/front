@@ -83,6 +83,9 @@ export const useUserStore = defineStore("userStore", () => {
       if (response.status === 200) {
         userInfo.value = response.data.userInfo;
         console.log("유저 정보:", userInfo.value);
+
+        isLoggedIn.value = true;
+        isValidToken.value = true;
       } else {
         throw new Error("유저 정보 없음");
       }
@@ -141,7 +144,6 @@ export const useUserStore = defineStore("userStore", () => {
 
   }
   }
-
 
   return {
     isLoggedIn,

@@ -77,7 +77,8 @@ const login = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async() => {
+
   console.log("페이지 로드 완료");
 });
 </script>

@@ -64,14 +64,14 @@
   </div>
 </template>
 <script setup>
-import { ref, reactive } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import LoginModal from "../modal/Login.vue";
 import JoinModal from "../modal/Join.vue";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/user";
 const userStore = useUserStore();
-const { userLogin, userLogout } = userStore;
-const { isLoggedIn, showLoginModal } = storeToRefs(userStore);
+const { userLogin, userLogout,getUserInfo } = userStore;
+const { isLoggedIn, showLoginModal, userInfo } = storeToRefs(userStore);
 
 const showJoinModal = ref(false);
 
@@ -135,4 +135,13 @@ const handleLogout = () => {
   userLogout();
   //메뉴 체인지
 };
+
+
+onMounted(async() => {
+  let token = sessionStorage.getItem("accessToken");
+  if (token) {
+    await getUserInfo(token);
+  }
+
+});
 </script>
