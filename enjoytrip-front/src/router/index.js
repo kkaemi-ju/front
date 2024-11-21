@@ -2,13 +2,13 @@ import { createRouter, createWebHistory } from "vue-router";
 import AppVue from "../App.vue";
 import Mypage from "../views/Mypage.vue";
 import MainVue from "../views/Main.vue";
-import BoardList from "../views/BoardList.vue"
-import BoardDetail from "../views/BoardDetail.vue"
-import BoardWrite from "../views/BoardWrite.vue"
+import BoardList from "../views/BoardList.vue";
+import BoardDetail from "../views/BoardDetail.vue";
+import BoardWrite from "../views/BoardWrite.vue";
 import Attractions from "@/views/Attraction.vue";
+import TripClip from "@/views/VideoList.vue";
 import { storeToRefs } from "pinia";
-import {useUserStore} from "../stores/user";
-
+import { useUserStore } from "../stores/user";
 const onlyAuthUser = async (to, from, next) => {
   const userStore = useUserStore();
   const { userInfo, isValidToken } = storeToRefs(userStore);
@@ -20,7 +20,7 @@ const onlyAuthUser = async (to, from, next) => {
     await getUserInfo(token);
   }
   if (!isValidToken.value || userInfo.value === null) {
-    alert("로그인 후 이용하실 수 있습니다.")
+    alert("로그인 후 이용하실 수 있습니다.");
     next({ name: "main" });
   } else {
     next();
@@ -44,29 +44,29 @@ const router = createRouter({
     },
     {
       path: "/board",
-      name:"boardlist",
-      beforeEnter:onlyAuthUser,
-      component:BoardList,
+      name: "boardlist",
+      beforeEnter: onlyAuthUser,
+      component: BoardList,
     },
-    { path: "/boardwrite", name:"boardwrite", component:BoardWrite},
-    { path: "/boarddetail", name:"boarddetail", component:BoardDetail},
+    { path: "/boardwrite", name: "boardwrite", component: BoardWrite },
+    {
+      path: "/boarddetail/:id",
+      name: "boarddetail",
+      component: BoardDetail,
+    },
     {
       path: "/mypage",
       name: "mypage",
-      beforeEnter:onlyAuthUser,
-      component: Mypage
+      beforeEnter: onlyAuthUser,
+      component: Mypage,
     },
     {
       path: "/planlist",
       name: "planlist",
-      component: () => import("../views/PlanList.vue")
-    },
-    {
-      path: "/planmake",
-      name: "planmake",
-      component: () => import("../views/PlanMake.vue")
+      component: () => import("../views/PlanList.vue"),
     },
     { path: "/attractions", name: "attractions", component: Attractions },
+    { path: "/tripclip", name: "tripclip", component: TripClip },
   ],
 });
 
