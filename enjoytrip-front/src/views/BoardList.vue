@@ -23,14 +23,21 @@
       </div>
     </div>
 
-    <!-- Search Section -->
-    <div class="container mx-auto py-6 px-4">
-      <div class="flex justify-between items-center mb-4">
-        <h1 class="text-2xl font-bold text-[#00712D]">
+    <!--Board Title Section -->
+    <div class="container mx-auto py-3 px-4">
+      <div class="flex justify-between items-center mb-1">
+        <h1 class="text-2xl font-bold text-[#00712D]" style="margin-top: 2rem">
           {{ activeBoardName }}
         </h1>
-        <!-- 검색 필터 -->
-        <div class="flex space-x-4 items-center ml-auto">
+      </div>
+    </div>
+
+    <!-- Board Content -->
+    <div class="container mx-auto py-6 px-4">
+      <!-- Board Header -->
+      <div class="flex justify-between items-center mb-6">
+        <!-- Search Section -->
+        <div class="flex items-center space-x-4">
           <select
             v-model="selectedFilter"
             class="p-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#00712D]"
@@ -39,14 +46,12 @@
             <option value="author">작성자</option>
             <option value="content">내용</option>
           </select>
-          <!-- 검색 입력 -->
           <input
             v-model="searchQuery"
             type="text"
             placeholder="검색어를 입력하세요"
             class="p-2 border rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-[#00712D]"
           />
-          <!-- 검색 버튼 -->
           <button
             @click="searchPosts"
             class="px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors"
@@ -54,13 +59,8 @@
             검색
           </button>
         </div>
-      </div>
-    </div>
 
-    <!-- Board Content -->
-    <div class="container mx-auto py-6 px-4">
-      <!-- Board Header -->
-      <div class="flex justify-between items-center mb-6">
+        <!-- 글쓰기 버튼 -->
         <button
           @click="goToPage('boardwrite')"
           class="ml-auto px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors"
@@ -83,7 +83,7 @@
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr
-              v-for="post in posts"
+              v-for="post in paginatedPosts"
               :key="post.id"
               @click="goToPage('boarddetail', post.id)"
               class="hover:bg-[#FFFBE6]/50 transition-colors"
@@ -108,6 +108,38 @@
         </table>
       </div>
     </div>
+    <!-- Pagination Section -->
+    <div class="flex justify-center mt-6">
+      <button
+        @click="changePage(currentPage - 1)"
+        :disabled="currentPage === 1"
+        class="px-4 py-2 mx-1 text-white bg-[#00712D] rounded-md hover:bg-[#00712D]/90"
+      >
+        이전
+      </button>
+
+      <button
+        v-for="page in totalPages"
+        :key="page"
+        @click="changePage(page)"
+        :class="[
+          'px-4 py-2 mx-1 rounded-md',
+          page === currentPage
+            ? 'bg-[#D5ED9F]/30 text-[#00712D]'
+            : 'text-gray-600 bg-white hover:bg-[#D5ED9F]/30',
+        ]"
+      >
+        {{ page }}
+      </button>
+
+      <button
+        @click="changePage(currentPage + 1)"
+        :disabled="currentPage === totalPages"
+        class="px-4 py-2 mx-1 text-white bg-[#00712D] rounded-md hover:bg-[#00712D]/90"
+      >
+        다음
+      </button>
+    </div>
   </div>
 </template>
 
@@ -128,14 +160,38 @@ const selectedFilter = ref("title"); // 검색 필터
 const searchQuery = ref(""); // 검색어
 const activeBoard = ref(""); // 활성 게시판 ID 설정
 const posts = ref([]); // 게시글 데이터
+const currentPage = ref(1); // 현재 페이지 번호
+const postsPerPage = 15; // 페이지당 게시글 개수
 
 const goToPage = (page, data = null) => {
   if (page === "boardwrite") {
+    // 글쓰기 넘어갈 때
     router.push({ name: page, query: { boardId: activeBoard.value } }); // 현재 선택된 게시판 ID를 query로 전달
   } else if (data) {
-    router.push({ name: page, params: { id: data } }); // 게시글 ID를 params로 전달
+    // 상세보기 넘어갈 때
+    router.push({
+      name: page,
+      query: { boardId: activeBoard.value },
+      params: { id: data },
+    }); // 게시글 ID를 params로 전달
   } else {
     router.push({ name: page });
+  }
+};
+
+const paginatedPosts = computed(() => {
+  const start = (currentPage.value - 1) * postsPerPage;
+  const end = start + postsPerPage;
+  return posts.value.slice(start, end); // 현재 페이지에 해당하는 데이터만 반환
+});
+
+const totalPages = computed(() => {
+  return Math.ceil(posts.value.length / postsPerPage); // 총 페이지 수 계산
+});
+
+const changePage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page; // 페이지 번호 업데이트
   }
 };
 
@@ -164,22 +220,19 @@ const setActiveBoard = async (boardName) => {
 // 서버로 요청을 보내 게시글 데이터를 가져오는 함수
 const getBoard = async () => {
   try {
-    const boardId = activeBoard.value || route.query.boardId || "1"; // 기본값 1
-    activeBoard.value = boardId; // 활성 게시판 ID 설정
-    const endpoint = `/board/load/${boardId}`; // 활성 게시판 ID 포함 경로
+    const boardId = activeBoard.value || route.query.boardId || "1";
+    activeBoard.value = boardId;
+
+    const endpoint = `/board/load/${boardId}`;
     console.log("endpoint:", endpoint);
 
-    const requestData = {
-      key: selectedFilter.value, // 검색 필터
-      word: searchQuery.value, // 검색어
-      pgno: 1, // 페이지 번호
-    };
-
-    console.log("요청 데이터:", requestData);
-    const response = await axios.get(
-      `http://localhost${endpoint}`,
-      { params: requestData } // GET 요청에 쿼리 전달
-    );
+    const response = await axios.get(`http://localhost${endpoint}`, {
+      params: {
+        key: selectedFilter.value,
+        word: searchQuery.value,
+        pgno: currentPage.value, // 현재 페이지 전달
+      },
+    });
 
     if (response.status === 200) {
       console.log("게시글 데이터 가져오기 성공:", response.data.articles);
@@ -187,10 +240,11 @@ const getBoard = async () => {
         id: article.boardId,
         title: article.title,
         author: article.userId,
-        date: article.createdAt, // 서버에서 받은 날짜
+        date: article.createdAt,
         views: article.view,
-        isNew: index < 3, // 최신 게시글 여부
+        isNew: index < 3,
       }));
+      currentPage.value = 1; // 새 데이터 로드 시 페이지 초기화
     } else {
       console.error("게시글 데이터 가져오기 실패:", response.statusText);
     }
@@ -201,7 +255,7 @@ const getBoard = async () => {
 
 onMounted(() => {
   const boardId = route.query.boardId || "1"; // 쿼리에서 boardId 가져오기, 없으면 기본값 1
-  console.log("boardId : " + boardId);
+
   activeBoard.value = boardId; // 활성 게시판 설정
   getBoard(); // 기본 게시판 데이터
 });

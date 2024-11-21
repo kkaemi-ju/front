@@ -1,31 +1,39 @@
 <template>
-  <div class="min-h-screen bg-[#FFFBE6]/30 py-8">
+  <div v-if="article" class="min-h-screen bg-[#FFFBE6]/30 py-8">
     <div class="container mx-auto px-4 max-w-4xl">
-      <button class="mb-4 flex items-center text-[#00712D] hover:underline">
-        <ChevronLeft class="w-5 h-5 mr-1" @click="goBackToBoard" />
+      <button
+        class="mb-4 flex items-center text-[#00712D] hover:underline"
+        @click="goBackToBoard"
+      >
+        <ChevronLeft class="w-5 h-5 mr-1" />
         목록으로 돌아가기
       </button>
 
       <article class="bg-white rounded-lg shadow-md p-6 mb-8">
         <!-- 제목 -->
-        <h1 class="text-3xl font-bold text-[#00712D] mb-4">{{ post.title }}</h1>
+        <h1 class="text-3xl font-bold text-[#00712D] mb-4">
+          {{ article.title }}
+        </h1>
         <!-- 작성자, 날짜, 조회수 -->
         <div class="flex items-center text-sm text-gray-800 mb-6">
-          <span class="mr-4">작성자: {{ post.author }}</span>
-          <span class="mr-4">{{ post.date }}</span>
-          <span>조회수: {{ post.views }}</span>
+          <span class="mr-4 text-1xl">작성자: {{ article.userId }}</span>
+          <span class="mr-4">{{ article.createdAt }}</span>
+          <span>조회수: {{ article.view }}</span>
         </div>
         <!-- 본문 내용 -->
-        <div class="prose max-w-none mb-6 text-black">
-          <p class="whitespace-pre-line">{{ post.content }}</p>
+        <div class="prose max-w-none mb-6 text-black text-2xl">
+          <p class="whitespace-pre-line">{{ article.content }}</p>
         </div>
         <!-- 이미지 -->
-        <img
-          :src="post.image"
-          :alt="post.title"
-          class="w-full rounded-lg mb-6"
-        />
-        <!-- 추천 및 댓글 버튼 -->
+        <div v-if="article.imageUrls && article.imageUrls.length" class="image-container">
+  <img
+    v-for="(imageUrl, index) in article.imageUrls"
+    :key="index"
+    :src="imageUrl"
+    alt="게시글 이미지"
+    class="w-full rounded-lg mb-4"
+  />
+</div>
         <div class="flex items-center justify-end space-x-4">
           <button class="flex items-center text-gray-800 hover:text-[#00712D]">
             <ThumbsUp class="w-5 h-5 mr-1" />
@@ -72,29 +80,19 @@
       </section>
     </div>
   </div>
+  <div v-else>
+    <p>로딩 중...</p>
+  </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { ChevronLeft, MessageSquare, ThumbsUp } from "lucide-vue-next";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import axios from "axios";
 
+const router = useRouter();
 const route = useRoute();
-const post = ref({
-  id: 1,
-  title: "제주도 여행 후기: 아름다운 섬에서의 5일간의 모험",
-  author: "제주러버",
-  date: "2023-12-20",
-  views: 1234,
-  content: `제주도에서 보낸 5일간의 여행은 정말 잊을 수 없는 경험이었습니다.
-    푸른 바다, 오름, 그리고 맛있는 음식들... 제주의 모든 것이 아름다웠습니다.
-
-    첫째 날, 우리는 성산일출봉을 올랐습니다. 정상에서 바라본 일출은 그야말로 장관이었죠.
-    둘째 날에는 우도로 향했습니다. 우도의 하얀 모래해변과 에메랄드빛 바다는 정말 환상적이었어요.
-
-    제주 여행을 계획하고 계신 분들께 꼭 추천드리고 싶습니다!`,
-  image: "/placeholder.svg?height=400&width=600",
-});
 
 const comments = ref([
   {
@@ -112,6 +110,9 @@ const comments = ref([
 ]);
 
 const newComment = ref("");
+const article = ref({
+  imageUrls: [] // 초기값 설정
+});
 
 const addComment = () => {
   if (newComment.value.trim()) {
@@ -128,6 +129,63 @@ const addComment = () => {
 const goBackToBoard = () => {
   router.push({ path: "/board", query: { boardId: route.query.boardId } });
 };
+
+// 게시글 받아옴
+const getArticle = async () => {
+  try {
+    const boardId = route.params.id;
+
+    // 게시글 데이터 가져오기
+    const response = await axios.get(`http://localhost/board/${boardId}`);
+    article.value = response.data;
+
+    if (response.status === 200) {
+      console.log("게시글 데이터 가져오기 성공:", response.data);
+    } else {
+      console.error("게시글 못 불러옴:", response.statusText);
+    }
+
+    // 파일 데이터 가져오기
+    fetchImages();
+  } catch (error) {
+    if (error.response) {
+      console.error("서버 응답 오류:", error.response.data);
+    } else {
+      console.error("네트워크 오류 발생:", error.message);
+    }
+  }
+};
+
+const fetchImages = async () => {
+  try {
+    const boardId = route.params.id;
+
+    // 이미지 파일 목록 가져오기
+    const fileResponse = await axios.get(
+      `http://localhost/board/loadfile/${boardId}`
+    );
+
+    if (fileResponse.status === 200) {
+      // API에서 반환된 로컬 경로를 브라우저에서 접근 가능한 URL로 변환
+      article.value.imageUrls = fileResponse.data.map((filePath) => {
+        // 파일명 추출
+        const fileName = filePath.split("/").pop();
+        // 서빙 가능한 URL로 변환
+        return `http://localhost/board/file/${boardId}/${fileName}`;
+      });
+
+      console.log("이미지 경로 로드 성공:", article.value.imageUrls);
+    } else {
+      console.error("이미지 경로 로드 실패:", fileResponse.statusText);
+    }
+  } catch (error) {
+    console.error("이미지 로드 중 오류 발생", error.message);
+  }
+};
+
+onMounted(() => {
+  getArticle();
+});
 </script>
 
 <style scoped>
