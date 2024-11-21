@@ -55,6 +55,11 @@ const router = createRouter({
       beforeEnter:onlyAuthUser,
       component: Mypage
     },
+    {
+      path: "/planlist",
+      name: "planlist",
+      component: () => import("../views/PlanList.vue")
+    },
     { path: "/attractions", name: "attractions", component: Attractions },
   ],
 });

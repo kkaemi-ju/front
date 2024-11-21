@@ -89,7 +89,7 @@ const joinForm = reactive({
 
 // 메뉴 항목
 const menuItems = [
-  { name: "여행계획", path: "/plan" },
+  { name: "여행계획", path: "/planlist" },
   { name: "관광지 조회", path: "/attractions" },
   { name: "게시판", path: "/board" },
   { name: "트립클립", path: "/tripclip" },
