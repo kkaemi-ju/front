@@ -114,10 +114,10 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import axios from "axios";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 
 const router = useRouter();
-
+const route = useRoute();
 const boards = [
   { id: "1", name: "자유게시판" },
   { id: "2", name: "핫플게시판" },
@@ -126,6 +126,8 @@ const boards = [
 
 const selectedFilter = ref("title"); // 검색 필터
 const searchQuery = ref(""); // 검색어
+const activeBoard = ref(""); // 활성 게시판 ID 설정
+const posts = ref([]); // 게시글 데이터
 
 const goToPage = (page, data = null) => {
   if (page === "boardwrite") {
@@ -143,10 +145,6 @@ const searchPosts = async () => {
   await getBoard();
 };
 
-const activeBoard = ref(boards[0].id); // 기본 게시판 ID 설정
-
-const posts = ref([]); // 게시글 데이터
-
 // 활성화된 게시판의 이름을 계산
 const activeBoardName = computed(() => {
   const board = boards.find((b) => b.id === activeBoard.value);
@@ -158,6 +156,7 @@ const setActiveBoard = async (boardName) => {
   const board = boards.find((b) => b.name === boardName);
   if (board) {
     activeBoard.value = board.id; // 활성 게시판 ID 업데이트
+    router.push({ query: { boardId: activeBoard.value } }); // URL 쿼리에 boardId 추가
     await getBoard(); // 게시판 데이터 가져오기
   }
 };
@@ -165,17 +164,21 @@ const setActiveBoard = async (boardName) => {
 // 서버로 요청을 보내 게시글 데이터를 가져오는 함수
 const getBoard = async () => {
   try {
-    const endpoint = `/board/load/${activeBoard.value}`; // 활성 게시판 ID를 포함한 경로
+    const boardId = activeBoard.value || route.query.boardId || "1"; // 기본값 1
+    activeBoard.value = boardId; // 활성 게시판 ID 설정
+    const endpoint = `/board/load/${boardId}`; // 활성 게시판 ID 포함 경로
+    console.log("endpoint:", endpoint);
+
     const requestData = {
       key: selectedFilter.value, // 검색 필터
       word: searchQuery.value, // 검색어
-      pgno: 1, // 페이지 번호 (기본값)
+      pgno: 1, // 페이지 번호
     };
 
-    console.log(requestData);
+    console.log("요청 데이터:", requestData);
     const response = await axios.get(
       `http://localhost${endpoint}`,
-      { params: requestData } // GET 요청에서 쿼리 파라미터를 전달하는 방식
+      { params: requestData } // GET 요청에 쿼리 전달
     );
 
     if (response.status === 200) {
@@ -184,10 +187,10 @@ const getBoard = async () => {
         id: article.boardId,
         title: article.title,
         author: article.userId,
-        date: article.createdAt, // 서버에서 받은 날짜 필드
+        date: article.createdAt, // 서버에서 받은 날짜
         views: article.view,
-        isNew: index < 5, // 예: 최신 게시글 표시
-      })); // 게시글 데이터 업데이트
+        isNew: index < 3, // 최신 게시글 여부
+      }));
     } else {
       console.error("게시글 데이터 가져오기 실패:", response.statusText);
     }
@@ -197,6 +200,9 @@ const getBoard = async () => {
 };
 
 onMounted(() => {
+  const boardId = route.query.boardId || "1"; // 쿼리에서 boardId 가져오기, 없으면 기본값 1
+  console.log("boardId : " + boardId);
+  activeBoard.value = boardId; // 활성 게시판 설정
   getBoard(); // 기본 게시판 데이터
 });
 </script>
