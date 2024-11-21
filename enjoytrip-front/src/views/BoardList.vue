@@ -128,8 +128,10 @@ const selectedFilter = ref("title"); // 검색 필터
 const searchQuery = ref(""); // 검색어
 
 const goToPage = (page, data = null) => {
-  if (data) {
-    router.push({ name: page, params: { id: data } });
+  if (page === "boardwrite") {
+    router.push({ name: page, query: { boardId: activeBoard.value } }); // 현재 선택된 게시판 ID를 query로 전달
+  } else if (data) {
+    router.push({ name: page, params: { id: data } }); // 게시글 ID를 params로 전달
   } else {
     router.push({ name: page });
   }

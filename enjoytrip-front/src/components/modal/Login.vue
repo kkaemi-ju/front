@@ -15,7 +15,7 @@
             id="userid"
             required
             v-model="loginUser.userId"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FF9100] focus:ring focus:ring-[#FF9100] focus:ring-opacity-50"
+            class="text-black mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FF9100] focus:ring focus:ring-[#FF9100] focus:ring-opacity-50"
           />
         </div>
         <div class="mb-6">
@@ -27,7 +27,7 @@
             id="password"
             v-model="loginUser.userPwd"
             required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FF9100] focus:ring focus:ring-[#FF9100] focus:ring-opacity-50"
+            class="text-black mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FF9100] focus:ring focus:ring-[#FF9100] focus:ring-opacity-50"
           />
         </div>
         <div class="flex items-center justify-between">
@@ -58,7 +58,7 @@ import { useUserStore } from "@/stores/user";
 import router from "@/router";
 
 const userStore = useUserStore();
-const {isLoggedIn} = storeToRefs(userStore)
+const { isLoggedIn } = storeToRefs(userStore);
 const { userLogin, getUserInfo } = userStore;
 const loginUser = ref({
   userId: "",
@@ -68,13 +68,12 @@ const email = ref("");
 const password = ref("");
 const login = async () => {
   await userLogin(loginUser.value);
-  let token = sessionStorage.getItem("accessToken")
-  console.log(token)
-  console.log("isLogin: "+isLoggedIn.value)
-  if(isLoggedIn.value){
-    await getUserInfo(token)
+  let token = sessionStorage.getItem("accessToken");
+  console.log(token);
+  console.log("isLogin: " + isLoggedIn.value);
+  if (isLoggedIn.value) {
+    await getUserInfo(token);
     //changemenu
-
   }
 };
 
