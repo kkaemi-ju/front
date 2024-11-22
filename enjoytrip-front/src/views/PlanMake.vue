@@ -220,10 +220,10 @@
           class="bg-white border-r overflow-hidden"
         >
         <div class="h-screen flex flex-col p-4 bg-gray-100">
-    <h1 class="text-2xl font-bold mb-4">제주도 여행지</h1>
+    <h6 class="text-2xl font-bold mb-4">리스트</h6>
     <div class="flex-1 overflow-y-auto">
       <TransitionGroup name="list" tag="div">
-        <div v-for="(item, index) in items" :key="item.id" class="flex items-center mb-4 p-4 bg-white rounded-lg shadow">
+        <div v-for="(item, index) in items[selectedDay]" :key="item.id" class="flex items-center mb-4 p-4 bg-white rounded-lg shadow">
           <img :src="item.image" alt="Item image" class="w-20 h-20 rounded-lg object-cover mr-4" />
           <div class="flex-1">
             <h2 class="font-bold text-lg">{{ item.title }}</h2>
@@ -287,10 +287,9 @@
  let chartInstance = null;
 
  const days = ['1일차', '2일차', '3일차']
-  const selectedDay = ref(days[0])
+ const selectedDay = ref(0); // 숫자 인덱스 (0, 1, 2)
   const searchQuery = ref('')
   const tags = ['관광지', '문화시설', '축제공연행사', '쇼핑','음식점']
-
   const itemss = ref([
   {
     id: 1,
@@ -342,76 +341,62 @@
     selected: false,
   },
 ])
-const items = ref([
-  {
-    id: 1,
-    image: '/placeholder.svg?height=80&width=80',
-    title: '순풍해장국',
-    description: '대한민국 제주특별자치도 제주시',
-  },
-  {
-    id: 2,
-    image: '/placeholder.svg?height=80&width=80',
-    title: '제주 해도미락 애월',
-    description: '대한민국 제주특별자치도 제주시',
-  },
-  {
-    id: 3,
-    image: '/placeholder.svg?height=80&width=80',
-    title: '성산 일출봉',
-    description: '대한민국 서귀포시 성산 일출봉',
-  },
-  {
-    id: 4,
-    image: '/placeholder.svg?height=80&width=80',
-    title: '제주동문시장',
-    description: '대한민국 제주특별자치도 제주시',
-  },
-  {
-    id: 5,
-    image: '/placeholder.svg?height=80&width=80',
-    title: '섭지코지',
-    description: '대한민국 제주특별자치도 서귀포시',
-  },
-  {
-    id: 6,
-    image: '/placeholder.svg?height=80&width=80',
-    title: '협재해변',
-    description: '제주시 협재해변',
-  },
-  {
-    id: 7,
-    image: '/placeholder.svg?height=80&width=80',
-    title: '우도',
-    description: '제주시 우도',
-  },
-  {
-    id: 8,
-    image: '/placeholder.svg?height=80&width=80',
-    title: '제주오설록 티뮤지엄',
-    description: '대한민국 서귀포시',
-  },
-  {
-    id: 9,
-    image: '/placeholder.svg?height=80&width=80',
-    title: '새별오름',
-    description: '제주시 새별오름',
-  },
-])
-const toggleSelected = (item) => {
-  item.selected = !item.selected; // 선택 상태 토글
+const itemssSelectedState = ref(
+  Array.from({ length: 3 }, () => itemss.value.map(() => false)) // 1일차, 2일차, 3일차
+);
+const items = ref([[], [], []]); // 0: 1일차, 1: 2일차, 2: 3일차
 
-  if (item.selected) {
-    // 선택된 경우, items 배열에 추가
-    items.value.push({
+// itemss와 itemssSelectedState를 동기화
+// itemss와 itemssSelectedState를 동기화
+// itemss와 itemssSelectedState를 동기화
+// itemss와 itemssSelectedState를 동기화
+// itemss와 itemssSelectedState를 동기화
+const syncSelectedState = () => {
+  if (!itemssSelectedState.value[selectedDay.value]) {
+    itemssSelectedState.value[selectedDay.value] = itemss.value.map(() => false);
+  }
+
+  if (!items.value[selectedDay.value]) {
+    items.value[selectedDay.value] = [];
+  }
+
+  // itemss의 selected 상태를 items를 기준으로 갱신
+  itemss.value.forEach((item, index) => {
+    const isSelected = items.value[selectedDay.value].some(
+      (selectedItem) => selectedItem.id === item.id
+    );
+    item.selected = isSelected;
+    itemssSelectedState.value[selectedDay.value][index] = isSelected;
+  });
+};
+
+const toggleSelected = (item, index) => {
+    console.log(item)
+  if (!itemssSelectedState.value[selectedDay.value]) {
+    itemssSelectedState.value[selectedDay.value] = itemss.value.map(() => false);
+  }
+
+  if (!items.value[selectedDay.value]) {
+    items.value[selectedDay.value] = [];
+  }
+
+  const isSelected = !itemssSelectedState.value[selectedDay.value][index];
+  itemssSelectedState.value[selectedDay.value][index] = isSelected;
+  item.selected = isSelected;
+
+  if (isSelected) {
+    // 선택된 아이템을 items 배열에 추가
+    items.value[selectedDay.value].push({
       id: item.id,
       image: item.image,
       title: item.title,
       description: item.description,
     });
   } else {
-    // 선택 해제된 경우, items 배열에서 제거
-    items.value = items.value.filter((i) => i.id !== item.id);
+    // 선택 해제된 아이템을 items 배열에서 제거
+    items.value[selectedDay.value] = items.value[selectedDay.value].filter(
+      (i) => i.id !== item.id
+    );
   }
 };
 
@@ -516,19 +501,38 @@ const toggleSelected = (item) => {
     },
   });
 };
-
 const removeItem = (id) => {
-  items.value = items.value.filter(item => item.id !== id)
-}
-
-const moveItem = (index, direction) => {
-  if ((direction === -1 && index > 0) || (direction === 1 && index < items.value.length - 1)) {
-    const newIndex = index + direction
-    const itemToMove = items.value[index]
-    items.value.splice(index, 1)
-    items.value.splice(newIndex, 0, itemToMove)
+  if (items.value[selectedDay.value]) {
+    items.value[selectedDay.value] = items.value[selectedDay.value].filter(
+      (item) => item.id !== id
+    );
   }
-}
+
+  itemss.value.forEach((item, index) => {
+    if (item.id === id) {
+      itemssSelectedState.value[selectedDay.value][index] = false;
+      item.selected = false;
+    }
+  });
+};
+const moveItem = (index, direction) => {
+  const currentItems = items.value[selectedDay.value]; // 현재 선택된 일차의 items 배열
+
+  if (!currentItems || currentItems.length === 0) return; // 아이템이 없으면 아무 작업도 하지 않음
+
+  const newIndex = index + direction;
+
+  // 새로운 인덱스가 배열 범위를 벗어나지 않도록 확인
+  if (newIndex < 0 || newIndex >= currentItems.length) return;
+
+  // 순서 바꾸기: 아이템을 기존 위치에서 제거하고 새로운 위치에 삽입
+  const [itemToMove] = currentItems.splice(index, 1);
+  currentItems.splice(newIndex, 0, itemToMove);
+
+  // 업데이트된 items 배열을 다시 할당 (Vue의 반응형 시스템에서 감지)
+  items.value[selectedDay.value] = [...currentItems];
+};
+
 
 
  // Watchers
@@ -543,8 +547,14 @@ const moveItem = (index, direction) => {
   }
 });
 
+// 일차 변경 시 itemss와 itemssSelectedState 동기화
+watch(selectedDay, () => {
+  syncSelectedState();
+});
+
  // Lifecycle hooks
  onMounted(() => {
+    syncSelectedState();
    if (currentStep.value === 1 && sidebarOpen.value) {
      renderChartWithDelay();
    }

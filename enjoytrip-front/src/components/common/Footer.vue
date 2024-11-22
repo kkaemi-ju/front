@@ -25,7 +25,7 @@
             </div>
           </div>
         </div>
-        <div class="mt-8 pt-8 border-t border-white/20 text-center text-sm">
+        <div class="mt-4 pt-4 border-t border-white/20 text-center text-sm">
           <p>&copy; {{ new Date().getFullYear() }} TravelGo. All rights reserved.</p>
         </div>
       </div>
