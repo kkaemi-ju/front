@@ -15,7 +15,7 @@
           <h1 class="text-3xl font-bold text-[#00712D]">
             {{ article.title }}
           </h1>
-          <div class="relative">
+          <div class="relative" v-if="article.userId === userInfo.userId">
             <!-- 햄버거 버튼 -->
             <button
               @click="toggleMenu"
@@ -134,8 +134,10 @@
 import { onMounted, ref } from "vue";
 import { ChevronLeft, MessageSquare, ThumbsUp } from "lucide-vue-next";
 import { useRoute, useRouter } from "vue-router";
+import { useUserStore } from "@/stores/user";
 import axios from "axios";
 
+const { userInfo } = useUserStore(); // 현재 사용자
 const router = useRouter();
 const route = useRoute();
 const boardType = ref("");
@@ -174,7 +176,6 @@ const modifyArticle = () => {
       boardType: route.query.boardId,
     }, // 수정모드, 게시글 id, 게시판 타입 전송
   });
-  console.log("수정 버튼이 클릭되었습니다!");
 };
 
 const deleteArticle = async () => {
