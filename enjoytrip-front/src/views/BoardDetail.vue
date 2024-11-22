@@ -10,10 +10,52 @@
       </button>
 
       <article class="bg-white rounded-lg shadow-md p-6 mb-8">
-        <!-- 제목 -->
-        <h1 class="text-3xl font-bold text-[#00712D] mb-4">
-          {{ article.title }}
-        </h1>
+        <!-- 제목과 햄버거 버튼 -->
+        <div class="flex justify-between items-center mb-4">
+          <h1 class="text-3xl font-bold text-[#00712D]">
+            {{ article.title }}
+          </h1>
+          <div class="relative">
+            <!-- 햄버거 버튼 -->
+            <button
+              @click="toggleMenu"
+              class="flex flex-col justify-center items-center w-6 h-6 focus:outline-none"
+            >
+              <span
+                class="block w-4 h-0.5 bg-black mb-0.5 transition-transform"
+                :class="{ 'rotate-45 translate-y-1': menuOpen }"
+              ></span>
+              <span
+                class="block w-4 h-0.5 bg-black mb-0.5 transition-opacity"
+                :class="{ 'opacity-0': menuOpen }"
+              ></span>
+              <span
+                class="block w-4 h-0.5 bg-black transition-transform"
+                :class="{ '-rotate-45 -translate-y-1': menuOpen }"
+              ></span>
+            </button>
+
+            <!-- 메뉴 -->
+            <div
+              v-if="menuOpen"
+              class="absolute top-8 right-0 bg-white shadow-md rounded-md border w-32"
+            >
+              <button
+                @click="modifyArticle"
+                class="block px-4 py-2 text-left text-black hover:bg-gray-100 transition-colors w-full"
+              >
+                수정
+              </button>
+              <button
+                @click="deleteArticle"
+                class="block px-4 py-2 text-left text-black hover:bg-gray-100 transition-colors w-full"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- 작성자, 날짜, 조회수 -->
         <div class="flex items-center text-sm text-gray-800 mb-6">
           <span class="mr-4 text-1xl">작성자: {{ article.userId }}</span>
@@ -25,15 +67,18 @@
           <p class="whitespace-pre-line">{{ article.content }}</p>
         </div>
         <!-- 이미지 -->
-        <div v-if="article.imageUrls && article.imageUrls.length" class="image-container">
-  <img
-    v-for="(imageUrl, index) in article.imageUrls"
-    :key="index"
-    :src="imageUrl"
-    alt="게시글 이미지"
-    class="w-full rounded-lg mb-4"
-  />
-</div>
+        <div
+          v-if="article.imageUrls && article.imageUrls.length"
+          class="image-container"
+        >
+          <img
+            v-for="(imageUrl, index) in article.imageUrls"
+            :key="index"
+            :src="imageUrl"
+            alt="게시글 이미지"
+            class="w-1/2 rounded-lg mb-4"
+          />
+        </div>
         <div class="flex items-center justify-end space-x-4">
           <button class="flex items-center text-gray-800 hover:text-[#00712D]">
             <ThumbsUp class="w-5 h-5 mr-1" />
@@ -93,7 +138,13 @@ import axios from "axios";
 
 const router = useRouter();
 const route = useRoute();
+const boardType = ref("");
+const boardId = ref("");
+const menuOpen = ref(false);
 
+const toggleMenu = () => {
+  menuOpen.value = !menuOpen.value;
+};
 const comments = ref([
   {
     id: 1,
@@ -111,8 +162,35 @@ const comments = ref([
 
 const newComment = ref("");
 const article = ref({
-  imageUrls: [] // 초기값 설정
+  imageUrls: [], // 초기값 설정
 });
+
+const modifyArticle = () => {
+  router.push({
+    path: "/boardwrite",
+    query: {
+      modify: "true",
+      boardId: route.params.id,
+      boardType: route.query.boardId,
+    }, // 수정모드, 게시글 id, 게시판 타입 전송
+  });
+  console.log("수정 버튼이 클릭되었습니다!");
+};
+
+const deleteArticle = async () => {
+  const confirmResult = confirm("정말로 삭제하시겠습니까?");
+  if (confirmResult) {
+    const response = await axios.delete(
+      `http://localhost/board/${boardId.value}`
+    );
+    if (response.status === 200) {
+      alert("삭제되었습니다!");
+      goBackToBoard();
+    } else {
+      console.error("삭제실패");
+    }
+  }
+};
 
 const addComment = () => {
   if (newComment.value.trim()) {
@@ -133,10 +211,8 @@ const goBackToBoard = () => {
 // 게시글 받아옴
 const getArticle = async () => {
   try {
-    const boardId = route.params.id;
-
     // 게시글 데이터 가져오기
-    const response = await axios.get(`http://localhost/board/${boardId}`);
+    const response = await axios.get(`http://localhost/board/${boardId.value}`);
     article.value = response.data;
 
     if (response.status === 200) {
@@ -158,11 +234,9 @@ const getArticle = async () => {
 
 const fetchImages = async () => {
   try {
-    const boardId = route.params.id;
-
     // 이미지 파일 목록 가져오기
     const fileResponse = await axios.get(
-      `http://localhost/board/loadfile/${boardId}`
+      `http://localhost/board/loadfile/${boardId.value}`
     );
 
     if (fileResponse.status === 200) {
@@ -171,7 +245,7 @@ const fetchImages = async () => {
         // 파일명 추출
         const fileName = filePath.split("/").pop();
         // 서빙 가능한 URL로 변환
-        return `http://localhost/board/file/${boardId}/${fileName}`;
+        return `http://localhost/board/file/${boardId.value}/${fileName}`;
       });
 
       console.log("이미지 경로 로드 성공:", article.value.imageUrls);
@@ -184,6 +258,7 @@ const fetchImages = async () => {
 };
 
 onMounted(() => {
+  boardId.value = route.params.id;
   getArticle();
 });
 </script>
