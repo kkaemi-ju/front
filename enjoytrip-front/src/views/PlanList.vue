@@ -63,6 +63,7 @@
     </div>
     <DateRangeModal
       :isVisible="isModalVisible"
+      @cancel="cancelModal"
       @close="closeModal"
       @select="handleDateSelection"
     />
@@ -123,6 +124,9 @@ const closeModal = () => {
   });
 };
 
+const cancelModal = () => {
+  isModalVisible.value = false;
+};
 const handleDateSelection = (dateRange) => {
   selectedDateRange.value = dateRange;
   closeModal();

@@ -85,12 +85,18 @@
         </button>
       </div>
 
-      <div class="flex justify-end">
+      <div class="flex justify-end space-x-4">
         <button
           @click="confirmSelection"
           class="bg-[#FF9100] text-white px-8 py-3 rounded-lg hover:bg-[#FF9100]/90"
         >
           선택
+        </button>
+        <button
+          @click="cancelSelection"
+          class="bg-gray-300 text-black px-8 py-3 rounded-lg hover:bg-gray-400"
+        >
+          취소
         </button>
       </div>
     </div>
@@ -112,7 +118,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close", "select"]);
+const emit = defineEmits(["close", "select", "cancel"]);
 
 const currentDate = ref(new Date());
 const selectedDates = ref([]);
@@ -221,5 +227,11 @@ const isInRange = (date) => {
   if (selectedDates.value.length !== 2) return false;
   const [start, end] = selectedDates.value.sort((a, b) => a - b);
   return date > start && date < end;
+};
+
+const cancelSelection = () => {
+  selectedDates.value = [];
+  currentDate.value = new Date();
+  emit("cancel");
 };
 </script>
