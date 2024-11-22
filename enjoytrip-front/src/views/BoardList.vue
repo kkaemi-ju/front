@@ -40,7 +40,7 @@
         <div class="flex items-center space-x-4">
           <select
             v-model="selectedFilter"
-            class="p-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#00712D]"
+            class="p-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#00712D] text-black"
           >
             <option value="title">제목</option>
             <option value="author">작성자</option>
