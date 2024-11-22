@@ -68,6 +68,14 @@
             placeholder="내용을 입력하세요"
           ></textarea>
         </div>
+        <!-- 지도 -->
+        <div class="mb-8" v-show="boardType == 2">
+          <h2 class="text-xl font-medium mb-4 text-black">지도</h2>
+          <div
+            ref="mapContainer"
+            class="w-full h-[500px] bg-gray-200 rounded-lg"
+          ></div>
+        </div>
         <!-- 사진 업로드 -->
         <div class="mb-6">
           <label class="block text-lg font-medium text-gray-800 mb-2"
