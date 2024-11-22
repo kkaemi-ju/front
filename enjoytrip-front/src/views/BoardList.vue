@@ -224,7 +224,6 @@ const getBoard = async () => {
     activeBoard.value = boardId;
 
     const endpoint = `/board/load/${boardId}`;
-    console.log("endpoint:", endpoint);
 
     const response = await axios.get(`http://localhost${endpoint}`, {
       params: {
@@ -235,7 +234,7 @@ const getBoard = async () => {
     });
 
     if (response.status === 200) {
-      console.log("게시글 데이터 가져오기 성공:", response.data.articles);
+      // console.log("게시글 데이터 가져오기 성공:", response.data.articles);
       posts.value = response.data.articles.map((article, index) => ({
         id: article.boardId,
         title: article.title,

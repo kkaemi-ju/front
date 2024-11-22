@@ -93,16 +93,27 @@
 
       <!-- 댓글 섹션 -->
       <section class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-bold text-[#00712D] mb-4">댓글</h2>
+        <h2 class="text-2xl font-bold text-[#00712D] mb-4">댓글</h2>
         <ul class="space-y-4 mb-6">
           <li
             v-for="comment in comments"
-            :key="comment.id"
+            :key="comment.commentId"
             class="border-b pb-4 last:border-b-0"
           >
             <div class="flex items-center justify-between mb-2">
-              <span class="font-medium text-black">{{ comment.author }}</span>
-              <span class="text-sm text-gray-800">{{ comment.date }}</span>
+              <span class="text-black font-bold">{{ comment.userId }}</span>
+              <div class="flex flex-col items-end">
+                <span class="text-sm text-gray-800">{{
+                  comment.createdAt
+                }}</span>
+                <button
+                  @click="deleteComment(comment.commentId)"
+                  class="text-[#00712D] text-sm hover:underline hover:text-[#FF9100] mt-1"
+                  v-if="comment.userId === userInfo.userId"
+                >
+                  X
+                </button>
+              </div>
             </div>
             <p class="text-black">{{ comment.content }}</p>
           </li>
@@ -147,26 +158,14 @@ const menuOpen = ref(false);
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value;
 };
-const comments = ref([
-  {
-    id: 1,
-    author: "여행마니아",
-    date: "2023-12-21",
-    content: "정말 좋은 후기네요! 저도 꼭 가보고 싶어요.",
-  },
-  {
-    id: 2,
-    author: "맛집탐험가",
-    date: "2023-12-22",
-    content: "제주도 맛집 추천 좀 해주세요!",
-  },
-]);
+const comments = ref([]);
 
 const newComment = ref("");
 const article = ref({
   imageUrls: [], // 초기값 설정
 });
 
+// 게시글 수정
 const modifyArticle = () => {
   router.push({
     path: "/boardwrite",
@@ -193,14 +192,26 @@ const deleteArticle = async () => {
   }
 };
 
-const addComment = () => {
+const addComment = async () => {
   if (newComment.value.trim()) {
-    comments.value.push({
-      id: comments.value.length + 1,
-      author: "현재사용자",
-      date: new Date().toISOString().split("T")[0],
+    const postData = {
+      userId: userInfo.userId,
       content: newComment.value.trim(),
-    });
+      boardId: boardId.value,
+    };
+
+    const response = await axios.post(
+      `http://localhost/board/comment`,
+      postData
+    );
+
+    if (response.status === 201) {
+      getComments();
+    } else {
+      console.error("error 발생", error.message);
+    }
+
+    // 초기화
     newComment.value = "";
   }
 };
@@ -217,7 +228,7 @@ const getArticle = async () => {
     article.value = response.data;
 
     if (response.status === 200) {
-      console.log("게시글 데이터 가져오기 성공:", response.data);
+      // console.log("게시글 데이터 가져오기 성공:", response.data);
     } else {
       console.error("게시글 못 불러옴:", response.statusText);
     }
@@ -233,6 +244,7 @@ const getArticle = async () => {
   }
 };
 
+// 이미지 받아오기
 const fetchImages = async () => {
   try {
     // 이미지 파일 목록 가져오기
@@ -248,8 +260,6 @@ const fetchImages = async () => {
         // 서빙 가능한 URL로 변환
         return `http://localhost/board/file/${boardId.value}/${fileName}`;
       });
-
-      console.log("이미지 경로 로드 성공:", article.value.imageUrls);
     } else {
       console.error("이미지 경로 로드 실패:", fileResponse.statusText);
     }
@@ -258,10 +268,66 @@ const fetchImages = async () => {
   }
 };
 
-onMounted(() => {
+// 댓글 받아오기
+const getComments = async () => {
+  try {
+    const response = await axios.get(
+      `http://localhost/board/comment/${boardId.value}`
+    );
+    if (response.status === 200) {
+      console.log(response.data);
+      comments.value = response.data;
+    }
+  } catch (error) {
+    console.error("오류 발생", error.message);
+  }
+};
+
+// 댓글 삭제
+const deleteComment = async (commentId) => {
+  const confirmResult = confirm("정말 삭제하시겠습니까?");
+
+  if (confirmResult) {
+    try {
+      const response = await axios.delete(
+        `http://localhost/board/comment/${commentId}`
+      );
+
+      if (response.status === 200) {
+        getComments();
+      }
+    } catch (error) {
+      console.error("댓글 삭제 중 오류 발생", error.message);
+    }
+  } else {
+    return;
+  }
+};
+
+onMounted(async () => {
+  // await waitForUserInfo();
+
+  // if (!userInfo.userId) {
+  //   alert("로그인이 필요합니다.");
+  //   router.push("/login");
+  //   return;
+  // }
+
   boardId.value = route.params.id;
   getArticle();
+  getComments();
 });
+
+// const waitForUserInfo = () => {
+//   return new Promise((resolve) => {
+//     const checkUserInfo = setInterval(() => {
+//       if (userInfo && userInfo.userId) {
+//         clearInterval(checkUserInfo);
+//         resolve();
+//       }
+//     }, 50); // 50ms 간격으로 확인
+//   });
+// };
 </script>
 
 <style scoped>
