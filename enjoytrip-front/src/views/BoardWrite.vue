@@ -314,7 +314,6 @@ const goBackToDetail = (page) => {
 const article = ref();
 // 글 수정
 const modifyArticle = async () => {
-  // 이전 데이터 가져와서 설정
   try {
     const boardId = route.query.boardId;
     const response = await axios.get(`http://localhost/board/${boardId}`);
@@ -327,7 +326,7 @@ const modifyArticle = async () => {
     } else {
       console.error("게시글 못 불러옴:", response.statusText);
     }
-    fetchImages(boardId);
+    fileUpload(boardId);
   } catch (error) {
     console.error("오류남!!");
   }
@@ -357,7 +356,6 @@ const fetchImages = async () => {
 
         // 받아온 이미지를 uploadedImages에 추가
         uploadedImages.value = imageUrls;
-        console.log("이미지 경로 로드 성공:", uploadedImages.value);
       } else {
         // 데이터가 없을 경우 빈 배열로 초기화
         uploadedImages.value = [];
@@ -390,7 +388,7 @@ const fetchImages = async () => {
 onMounted(() => {
   boardId.value = route.query.boardId;
   boardType.value = route.query.boardType;
-
+  fetchImages();
   if (route.query.modify === "true") {
     // 게시글 수정
     modifyArticle();
