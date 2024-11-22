@@ -221,33 +221,7 @@ const submitPost = async () => {
       console.log("게시글 작성 성공:", response.data);
     }
 
-    const boardId = response.data.boardId;
-
-    // 사진 저장
-    const fileDtos = uploadedImages.value.length
-      ? uploadedImages.value.map((image) => ({
-          boardId: boardId,
-          fileUrl: image,
-        }))
-      : null;
-
-    if (fileDtos && fileDtos.length > 0) {
-      const fileResponse = await axios.post(
-        "http://localhost/board/fileUpload",
-        fileDtos,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (fileResponse.status === 201) {
-        console.log("파일 업로드 성공!!");
-      } else {
-        console.error("파일 업로드 실패", fileResponse.statusText);
-      }
-    }
+    fileUpload(response.data.boardId);
     alert("게시글이 작성되었습니다!");
     router.push({ path: "/board", query: { boardId: postData.boardId } });
   } catch (error) {
@@ -262,11 +236,41 @@ const submitPost = async () => {
   }
 };
 
+const fileUpload = async (boardId) => {
+  // 사진 저장
+  const fileDtos = uploadedImages.value.length
+    ? uploadedImages.value.map((image) => ({
+        boardId: boardId,
+        fileUrl: image,
+      }))
+    : null;
+
+  if (fileDtos && fileDtos.length > 0) {
+    const fileResponse = await axios.post(
+      "http://localhost/board/fileUpload",
+      fileDtos,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (fileResponse.status === 201) {
+      console.log("파일 업로드 성공!!");
+    } else {
+      console.error("파일 업로드 실패", fileResponse.statusText);
+    }
+  }
+};
+
 const submitModify = async () => {
   if (!title.value.trim() || !content.value.trim()) {
     alert("제목과 내용을 입력해주세요!");
     return;
   }
+
+  boardId.value = route.query.boardId;
 
   // 게시글 내용 설정
   const postData = {
@@ -276,14 +280,15 @@ const submitModify = async () => {
     boardId: boardId.value,
   };
 
-  articleno = route.query.boardId;
   const response = await axios.put(
-    `http://localhost/board/${articleno}`,
+    `http://localhost/board/${boardId.value}`,
     postData
   );
-  console.log(response.data);
+
+  fileUpload(route.query.boardId);
   if (response.status === 200) {
-    console.log("성공!");
+    alert("수정되었습니다!");
+    router.push({ name: "boarddetail", params: { id: boardId.value } });
   } else {
     console.error("수정 실패");
   }
@@ -322,7 +327,7 @@ const modifyArticle = async () => {
     } else {
       console.error("게시글 못 불러옴:", response.statusText);
     }
-    fetchImages();
+    fetchImages(boardId);
   } catch (error) {
     console.error("오류남!!");
   }
@@ -339,23 +344,46 @@ const fetchImages = async () => {
     );
 
     if (fileResponse.status === 200) {
-      // API에서 반환된 로컬 경로를 브라우저에서 접근 가능한 URL로 변환
-      const imageUrls = fileResponse.data.map((filePath) => {
-        // 파일명 추출
-        const fileName = filePath.split("/").pop();
-        // 서빙 가능한 URL로 변환
-        return `http://localhost/board/file/${boardId}/${fileName}`;
-      });
+      const fileData = fileResponse.data;
 
-      // 받아온 이미지를 uploadedImages에 추가
-      uploadedImages.value = imageUrls;
+      if (Array.isArray(fileData) && fileData.length > 0) {
+        // API에서 반환된 로컬 경로를 브라우저에서 접근 가능한 URL로 변환
+        const imageUrls = fileData.map((filePath) => {
+          // 파일명 추출
+          const fileName = filePath.split("/").pop();
+          // 서빙 가능한 URL로 변환
+          return `http://localhost/board/file/${boardId}/${fileName}`;
+        });
 
-      console.log("이미지 경로 로드 성공:", uploadedImages.value);
+        // 받아온 이미지를 uploadedImages에 추가
+        uploadedImages.value = imageUrls;
+        console.log("이미지 경로 로드 성공:", uploadedImages.value);
+      } else {
+        // 데이터가 없을 경우 빈 배열로 초기화
+        uploadedImages.value = [];
+        console.warn("이미지 파일이 없습니다.");
+      }
     } else {
-      console.error("이미지 경로 로드 실패:", fileResponse.statusText);
+      // 비정상 상태 코드 처리
+      uploadedImages.value = [];
+      console.warn("이미지 로드 실패: 상태 코드", fileResponse.status);
     }
   } catch (error) {
-    console.error("이미지 로드 중 오류 발생", error.message);
+    // 요청 중 오류 발생 시
+    uploadedImages.value = []; // 빈 배열로 초기화
+    if (error.response) {
+      if (error.response.status === 404) {
+        console.warn("해당 boardId에 대한 파일이 없습니다.");
+      } else {
+        console.error(
+          "서버 오류:",
+          error.response.status,
+          error.response.statusText
+        );
+      }
+    } else {
+      console.error("네트워크 오류 발생:", error.message);
+    }
   }
 };
 
