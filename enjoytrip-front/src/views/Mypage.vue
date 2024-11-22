@@ -67,7 +67,6 @@
           삭제
         </button>
         <button
-
           class="px-6 py-2 text-white rounded-lg transition-colors duration-200"
           :style="{
             backgroundColor: '#00712D',
@@ -102,10 +101,7 @@
           class="w-full mb-2 px-4 py-2 border rounded-lg"
           @input="checkPasswordMatch"
         />
-        <p
-          v-if="passwordError"
-          class="text-sm text-red-500 mb-4"
-        >
+        <p v-if="passwordError" class="text-sm text-red-500 mb-4">
           비밀번호가 일치하지 않습니다.
         </p>
         <div class="flex justify-end space-x-4">
@@ -136,7 +132,7 @@ import { useUserStore } from "@/stores/user";
 
 const userStore = useUserStore();
 const { userInfo } = storeToRefs(userStore);
-const {userLogout, setUserInfo} = userStore;
+const { userLogout, setUserInfo } = userStore;
 const form = ref({
   userName: "",
   userId: "",
@@ -153,18 +149,21 @@ const handleSubmit = () => {
 };
 const handleUpdate = async () => {
   try {
-    console.log(form.value)
-    const response = await axios.post("http://localhost/mypage/update",form.value,
-    {
-      headers:{
-          "Content-Type": "application/json;charset=utf-8"
-        }
-    });
+    console.log(form.value);
+    const response = await axios.post(
+      "http://localhost/mypage/update",
+      form.value,
+      {
+        headers: {
+          "Content-Type": "application/json;charset=utf-8",
+        },
+      }
+    );
 
     // HTTP 상태 코드 확인
     if (response.status === 200) {
-      console.log(response.data)
-      setUserInfo(response.data["userInfo"])
+      console.log(response.data);
+      setUserInfo(response.data["userInfo"]);
     } else {
       alert("알 수 없는 오류가 발생했습니다.");
     }
@@ -172,26 +171,27 @@ const handleUpdate = async () => {
     console.error("업데이트 확인 오류:", error);
     alert("업데이트 중 문제가 발생했습니다.");
   }
-}
+};
 const handleDelete = async () => {
-
   console.log("Delete clicked");
   try {
-    const response = await axios.post("http://localhost/mypage/delete",JSON.stringify(userInfo.value),
-    {
-      headers:{
-          "Content-Type": "application/json;charset=utf-8"
-
-        }
-    });
+    const response = await axios.post(
+      "http://localhost/mypage/delete",
+      JSON.stringify(userInfo.value),
+      {
+        headers: {
+          "Content-Type": "application/json;charset=utf-8",
+        },
+      }
+    );
 
     // HTTP 상태 코드 확인
     if (response.status === 200) {
-      try{
-        await userLogout()
-        console.log("로그인 성공적으로")
-      } catch (error){
-        console.error("로그아웃 실패")
+      try {
+        await userLogout();
+        console.log("로그인 성공적으로");
+      } catch (error) {
+        console.error("로그아웃 실패");
       }
     } else {
       alert("알 수 없는 오류가 발생했습니다.");
@@ -214,28 +214,22 @@ onMounted(() => {
 
 // Verify current password
 const verifyPassword = async () => {
-
   try {
-    const response = await axios.post(
-      "http://localhost/user/login",
-      {
-        userId: userInfo.value.userId,
-        userPwd: form.value.userPwd
-      }
-    );
-    if(response.status==201){
+    const response = await axios.post("http://localhost/user/login", {
+      userId: userInfo.value.userId,
+      userPwd: form.value.userPwd,
+    });
+    if (response.status == 201) {
       isPasswordModalVisible.value = true;
-      form.value.userPwd ="";
-    }
-    else {
+      form.value.userPwd = "";
+    } else {
       alert("현재 비밀번호가 일치하지 않습니다.");
     }
   } catch (error) {
     alert("현재 비밀번호가 일치하지 않습니다.");
   }
 
-  return ;
-
+  return;
 };
 
 // Check if passwords match
@@ -256,7 +250,7 @@ const changePassword = async () => {
       userPwd: newPassword.value,
     });
 
-    if (response.status==200) {
+    if (response.status == 200) {
       alert("비밀번호가 성공적으로 변경되었습니다.");
       isPasswordModalVisible.value = false; // Close modal
       newPassword.value = "";

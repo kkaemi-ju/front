@@ -7,7 +7,9 @@
       <form @submit.prevent="handleSubmit">
         <!-- Name Field -->
         <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 text-[#00712D]">이름</label>
+          <label class="block text-sm font-medium mb-2 text-[#00712D]"
+            >이름</label
+          >
           <input
             v-model="joinForm.name"
             type="text"
@@ -18,7 +20,9 @@
 
         <!-- ID Field with Validation -->
         <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 text-[#00712D]">아이디</label>
+          <label class="block text-sm font-medium mb-2 text-[#00712D]"
+            >아이디</label
+          >
           <div class="flex space-x-2">
             <input
               v-model="joinForm.id"
@@ -45,7 +49,9 @@
 
         <!-- Password Fields -->
         <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 text-[#00712D]">비밀번호</label>
+          <label class="block text-sm font-medium mb-2 text-[#00712D]"
+            >비밀번호</label
+          >
           <input
             v-model="joinForm.password"
             type="password"
@@ -56,7 +62,9 @@
 
         <!-- Password Confirmation -->
         <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 text-[#00712D]">비밀번호 확인</label>
+          <label class="block text-sm font-medium mb-2 text-[#00712D]"
+            >비밀번호 확인</label
+          >
           <input
             v-model="passwordConfirm"
             type="password"
@@ -73,7 +81,9 @@
 
         <!-- Email Field -->
         <div class="mb-4">
-          <label class="block text-sm font-medium mb-2 text-[#00712D]">이메일</label>
+          <label class="block text-sm font-medium mb-2 text-[#00712D]"
+            >이메일</label
+          >
           <input
             v-model="joinForm.email"
             type="email"

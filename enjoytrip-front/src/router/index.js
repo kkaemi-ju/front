@@ -68,12 +68,12 @@ const router = createRouter({
     {
       path: "/plandetail",
       name: "plandetail",
-      component: () => import("../views/PlanDetail.vue")
+      component: () => import("../views/PlanDetail.vue"),
     },
     {
       path: "/planmake",
       name: "planmake",
-      component: () => import("../views/PlanMake.vue")
+      component: () => import("../views/PlanMake.vue"),
     },
     { path: "/attractions", name: "attractions", component: Attractions },
     { path: "/tripclip", name: "tripclip", component: TripClip },
