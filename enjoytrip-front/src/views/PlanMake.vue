@@ -20,7 +20,7 @@
           </div>
         </div>
         <div class="text-sm text-gray-500">
-          {{ selectedRegion || "지역" }}
+          {{ sidoMapping[searchModel.selectedLocation] || "지역" }}
         </div>
       </div>
     </div>
@@ -81,13 +81,16 @@
           <div v-if="currentStep === 1" class="p-4">
             <h3 class="text-lg font-medium mb-4">지역</h3>
             <select
-              v-model="selectedRegion"
+              v-model="searchModel.selectedLocation"
               class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#00712D]"
             >
-              <option value="">지역을 선택하세요</option>
-              <option value="서울">서울</option>
-              <option value="대구">대구</option>
-              <option value="부산">부산</option>
+              <option
+                v-for="item in originalLocations"
+                :value="item.sido_code"
+                :key="item.sido_code"
+              >
+                {{ item.sido_name }}
+              </option>
             </select>
 
             <div>
@@ -126,16 +129,16 @@
 
               <div class="flex items-center mb-4">
                 <input
-                  v-model="searchQuery"
+                  v-model="searchModel.searchTerm"
                   type="text"
                   placeholder="장소명을 입력하세요"
                   class="flex-1 border rounded-md px-4 py-2"
                 />
-                <button class="ml-2">
+                <button @click="handleSearch" class="ml-2">
                   <SearchIcon class="h-5 w-5 text-gray-500" />
                 </button>
               </div>
-              <div class="flex items-center space-x-2">
+              <div class="flex items-center space-x-2" style="width: 350px">
                 <button @click="scrollLeft" class="p-2">
                   <ChevronLeftIcon class="h-5 w-5 text-gray-600" />
                 </button>
@@ -144,40 +147,46 @@
                   class="flex overflow-x-auto space-x-2"
                 >
                   <button
-                    v-for="(tag, index) in tags"
+                    v-for="(tag, index) in recommendationTypes"
                     :key="index"
                     @click="toggleTag(tag)"
                     :class="[
                       'flex-shrink-0 px-3 py-1 border rounded-full',
-                      selectedTag === tag
+                      searchModel.selectedRecommendationType.content_type_id ===
+                      tag.content_type_id
                         ? 'bg-blue-600 text-white'
                         : 'bg-white text-blue-600',
                     ]"
                   >
-                    {{ tag }}
+                    {{ tag.content_type_name }}
                   </button>
                 </div>
                 <button @click="scrollRight" class="p-2">
                   <ChevronRightIcon class="h-5 w-5 text-gray-600" />
                 </button>
               </div>
-              <div class="h-screen flex flex-col p-4 bg-gray-100">
+              <div
+                class="h-screen flex flex-col p-4 bg-gray-100"
+                v-if="updatedTripList.length > 0"
+              >
                 <div class="flex-1 overflow-y-auto">
                   <div
-                    v-for="(item, index) in itemss"
-                    :key="item.id"
+                    v-for="(item, index) in updatedTripList"
+                    :key="`${item.title}-${index}`"
                     class="flex items-center mb-4 p-4 bg-white rounded-lg shadow"
                   >
                     <img
-                      :src="item.image"
-                      alt="Item image"
+                      :src="item.firstImage1 || 'src/assets/img/no-img.png'"
+                      :alt="item.title"
                       class="w-20 h-20 rounded-lg object-cover mr-4"
                     />
                     <div class="flex-1">
                       <div class="flex items-center mb-1">
                         <h2 class="font-bold">{{ item.title }}</h2>
                       </div>
-                      <p class="text-gray-600">{{ item.description }}</p>
+                      <p class="text-gray-600">
+                        {{ item.addr1 }} {{ item.addr2 }}
+                      </p>
                     </div>
                     <div>
                       <button
@@ -216,17 +225,17 @@
             <TransitionGroup name="list" tag="div">
               <div
                 v-for="(item, index) in items[selectedDay]"
-                :key="item.id"
+                :key="item.no"
                 class="flex items-center mb-4 p-4 bg-white rounded-lg shadow"
               >
                 <img
-                  :src="item.image"
+                  :src="item.firstImage1 || 'src/assets/img/no-img.png'"
                   alt="Item image"
                   class="w-20 h-20 rounded-lg object-cover mr-4"
                 />
                 <div class="flex-1">
                   <h2 class="font-bold text-lg">{{ item.title }}</h2>
-                  <p class="text-gray-600">{{ item.description }}</p>
+                  <!-- <p class="text-gray-600">{{ item.description }}</p> -->
                 </div>
                 <div class="flex flex-col items-center space-y-2 ml-4">
                   <button
@@ -245,7 +254,7 @@
                   </button>
                 </div>
                 <button
-                  @click="removeItem(item.id)"
+                  @click="removeItem(item.no)"
                   class="ml-2 text-gray-500 hover:text-red-500"
                 >
                   <TrashIcon class="w-5 h-5" />
@@ -273,11 +282,10 @@
       </button>
 
       <!-- Right Content Area (Map Placeholder) -->
-      <div class="flex-1 bg-gray-50 min-h-[calc(100vh-64px)]">
-        <div class="h-full flex items-center justify-center text-gray-400">
-          암튼차트
-        </div>
-      </div>
+      <div
+        ref="mapContainer"
+        class="flex-1 bg-gray-50 min-h-[calc(100vh-64px)] rounded-lg"
+      ></div>
     </div>
   </div>
 </template>
@@ -295,6 +303,7 @@ import {
 } from "lucide-vue-next";
 import Chart from "chart.js/auto";
 import { useRouter, useRoute } from "vue-router";
+import axios from "axios";
 
 const router = useRouter();
 const route = useRoute();
@@ -313,67 +322,257 @@ const days = Array.from(
 );
 const selectedDay = ref(0); // 숫자 인덱스 (0, 1, 2)
 const searchQuery = ref("");
-const tags = ["관광지", "문화시설", "축제공연행사", "쇼핑", "음식점"];
-const itemss = ref([
-  {
-    id: 1,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "순풍해장국",
-    description: "13년 전통, 제주공항 근처 해장국 맛집",
-    selected: false,
-  },
-  {
-    id: 2,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "제주 해도미락 애월",
-    description: "애월 해안도로 오션뷰 갈치조림 맛집",
-    selected: false,
-  },
-  {
-    id: 3,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "성산 일출봉",
-    description: "대한민국 서귀포시 성산 일출봉",
-    selected: false,
-  },
-  {
-    id: 4,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "제주동문시장",
-    description: "대한민국 제주특별자치도 제주시",
-    selected: false,
-  },
-  {
-    id: 5,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "섭지코지",
-    description: "대한민국 제주특별자치도 서귀포시",
-    selected: false,
-  },
-  {
-    id: 6,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "우도",
-    description: "제주도 동쪽에 위치한 작은 섬",
-    selected: false,
-  },
-  {
-    id: 7,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "한라산",
-    description: "제주도의 상징, 대한민국에서 가장 높은 산",
-    selected: false,
-  },
-]);
-const itemssSelectedState = ref(
-  Array.from({ length: 3 }, () => itemss.value.map(() => false)) // 1일차, 2일차, 3일차
-);
-const items = ref([[], [], []]); // 0: 1일차, 1: 2일차, 2: 3일차
+const recommendationTypes = [
+  { content_type_id: 12, content_type_name: "관광지" },
+  { content_type_id: 14, content_type_name: "문화시설" },
+  { content_type_id: 15, content_type_name: "축제공연행사" },
+  { content_type_id: 25, content_type_name: "여행코스" },
+  { content_type_id: 28, content_type_name: "레포츠" },
+  { content_type_id: 32, content_type_name: "숙박" },
+  { content_type_id: 38, content_type_name: "쇼핑" },
+  { content_type_id: 39, content_type_name: "음식점" },
+];
 
+const originalLocations = [
+  { sido_code: 1, sido_name: "서울" },
+  { sido_code: 2, sido_name: "인천" },
+  { sido_code: 3, sido_name: "대전" },
+  { sido_code: 4, sido_name: "대구" },
+  { sido_code: 5, sido_name: "광주" },
+  { sido_code: 6, sido_name: "부산" },
+  { sido_code: 7, sido_name: "울산" },
+  { sido_code: 8, sido_name: "세종특별자치시" },
+  { sido_code: 31, sido_name: "경기도" },
+  { sido_code: 32, sido_name: "강원특별자치도" },
+  { sido_code: 33, sido_name: "충청북도" },
+  { sido_code: 34, sido_name: "충청남도" },
+  { sido_code: 35, sido_name: "경상북도" },
+  { sido_code: 36, sido_name: "경상남도" },
+  { sido_code: 37, sido_name: "전북특별자치도" },
+  { sido_code: 38, sido_name: "전라남도" },
+  { sido_code: 39, sido_name: "제주도" },
+];
+
+const sidoMapping = originalLocations.reduce(
+  (acc, { sido_code, sido_name }) => {
+    acc[sido_code] = sido_name;
+    return acc;
+  },
+  {}
+);
+// 지역별 중심좌표
+const locationCoordinates = {
+  서울: { lat: 37.5665, lng: 126.978 },
+  인천: { lat: 37.4563, lng: 126.7052 },
+  대전: { lat: 36.3504, lng: 127.3845 },
+  대구: { lat: 35.8714, lng: 128.6014 },
+  광주: { lat: 35.1595, lng: 126.8526 },
+  부산: { lat: 35.1796, lng: 129.0756 },
+  울산: { lat: 35.5395, lng: 129.3114 },
+  세종특별자치시: { lat: 36.4803, lng: 127.289 },
+  경기도: { lat: 37.4138, lng: 127.5183 },
+  강원특별자치도: { lat: 37.8228, lng: 128.1555 },
+  충청북도: { lat: 36.6356, lng: 127.4917 },
+  충청남도: { lat: 36.5184, lng: 126.8 },
+  경상북도: { lat: 36.4919, lng: 128.8886 },
+  경상남도: { lat: 35.4606, lng: 128.2132 },
+  전북특별자치도: { lat: 35.7175, lng: 127.153 },
+  전라남도: { lat: 34.8679, lng: 126.991 },
+  제주도: { lat: 33.4996, lng: 126.5312 },
+};
+const searchModel = ref({
+  searchTerm: "",
+  selectedLocation: 4,
+  selectedRecommendationType: {
+    content_type_id: null,
+    content_type_name: "선택",
+  },
+});
+
+// 검색 결과 저장
+const tripList = ref([]);
+const updatedTripList = ref([]);
+const markers = ref([]); // 마커들을 저장할 배열
+const mapContainer = ref(null);
+const map = ref(null);
+const markerImageSrc =
+  "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 마커 이미지 URL
+const itemssSelectedState = ref(
+  Array.from({ length: Number(route.query.day) }, () =>
+    updatedTripList.value.map(() => false)
+  ) // 1일차, 2일차, 3일차
+);
+const length = Number(route.query.day);
+const items = ref(Array.from({ length }, () => [])); // 0: 1일차, 1: 2일차, 2: 3일차
+
+const initMap = () => {
+  if (!mapContainer.value) {
+    console.error("mapContainer가 초기화되지 않았습니다.");
+    return;
+  }
+
+  const options = {
+    center: new kakao.maps.LatLng(33.450701, 126.570667), // Default center
+    level: 9, // Zoom level
+  };
+
+  map.value = new kakao.maps.Map(mapContainer.value, options);
+};
+
+const handleSearch = async () => {
+  try {
+    // console.log(`Search Term: ${searchModel.value.searchTerm}`);
+    // console.log(`Selected Location: ${searchModel.value.selectedLocation}`);
+    // console.log(
+    //   `Recommendation Type: ${searchModel.value.selectedRecommendationType?.content_type_id}`
+    // );
+
+    const searchTerm = searchModel.value.searchTerm.trim();
+    const selectedLocation = searchModel.value.selectedLocation;
+    const selectedRecommendationType =
+      searchModel.value.selectedRecommendationType?.content_type_id || null; // 수정
+
+    let endpoint = "";
+    let requestData = {};
+
+    if (searchTerm && selectedLocation && selectedRecommendationType) {
+      endpoint = "/sidotypetitlesearch";
+      requestData = {
+        areaCode: selectedLocation,
+        contentTypeId: selectedRecommendationType,
+        keyword: searchTerm,
+      };
+    } else if (searchTerm && selectedLocation) {
+      endpoint = "/sidotitlesearch";
+      requestData = {
+        areaCode: selectedLocation,
+        keyword: searchTerm,
+      };
+    } else if (selectedLocation && selectedRecommendationType) {
+      endpoint = "/sidotypesearch";
+      requestData = {
+        areaCode: selectedLocation,
+        contentTypeId: selectedRecommendationType,
+      };
+    } else if (selectedLocation) {
+      endpoint = "/sidosearch";
+      requestData = {
+        areaCode: selectedLocation,
+      };
+    } else {
+      throw new Error("올바른 검색 조건을 입력하세요.");
+    }
+
+    const response = await axios.post(
+      `http://localhost/attraction${endpoint}`,
+      requestData
+    );
+
+    tripList.value = response.data;
+    updatedTripList.value = tripList.value.map((item, index) => ({
+      ...item, // 기존 객체 내용 유지
+      selected: false, // 새 key와 값 추가 (여기선 예시로 index + 2 사용)
+    }));
+    console.log("selected");
+    console.log(items.value.length);
+    for (let trip of items.value) {
+      console.log(trip);
+    }
+    const coordinates =
+      locationCoordinates[sidoMapping[searchModel.value.selectedLocation]];
+    const newCenter = new kakao.maps.LatLng(coordinates.lat, coordinates.lng);
+
+    map.value.setCenter(newCenter);
+    // addMarkers();
+  } catch (error) {
+    console.error("검색 요청 중 오류 발생:", error);
+  }
+};
+
+const addMarkers = () => {
+  // 기존 마커 제거
+  if (markers.value && Array.isArray(markers.value)) {
+    markers.value.forEach((item) => {
+      if (item && item.marker) {
+        item.marker.setMap(null); // 기존 마커를 지도에서 제거
+      }
+    });
+  }
+  markers.value = []; // 기존 마커 목록 초기화
+
+  // 첫 번째 마커의 위치를 저장할 변수
+  let firstMarkerPosition = null;
+
+  updatedTripList.value.forEach((trip, index) => {
+    if (!trip.latitude || !trip.longitude) return; // 유효한 좌표만 처리
+
+    // 마커 위치
+    const markerPosition = new kakao.maps.LatLng(trip.latitude, trip.longitude);
+
+    // 첫 번째 마커의 위치를 저장
+    if (index === 0) {
+      firstMarkerPosition = markerPosition;
+    }
+
+    // 마커 이미지 설정
+    const imageSize = new kakao.maps.Size(24, 35);
+    const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
+
+    // 마커 생성
+    const marker = new kakao.maps.Marker({
+      map: map.value,
+      position: markerPosition,
+      title: trip.title,
+      image: markerImage,
+    });
+
+    // 인포윈도우 내용
+    const infowindowContent = `
+  <div style="padding: 10px; max-width: 200px; word-wrap: break-word; text-align: center; overflow: hidden; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); border-radius: 8px; font-family: Arial, sans-serif;">
+    <div style="margin-bottom: 10px;">
+      <img
+        src="${trip.firstImage1 || "src/assets/img/no-img.png"}"
+        alt="${trip.title}"
+        style="width: 100%; max-width: 150px; height: auto; border-radius: 4px;"
+      />
+    </div>
+    <strong style="font-size: 14px; color: #333;">${trip.title}</strong><br>
+    <span style="font-size: 11px; color: #777; display: block; margin-top: 5px;">
+      ${trip.addr1 || ""} ${trip.addr2 || ""}
+    </span>
+  </div>
+`;
+    const infowindow = new kakao.maps.InfoWindow({
+      content: infowindowContent,
+      removable: true,
+    });
+
+    // 마커 클릭 이벤트 추가
+    kakao.maps.event.addListener(marker, "click", () => {
+      // 모든 기존 인포윈도우 닫기
+      markers.value.forEach((item) => item.infowindow.close());
+
+      // 현재 클릭된 마커의 인포윈도우 열기
+      infowindow.open(map.value, marker);
+    });
+
+    // 새 마커와 인포윈도우를 배열에 추가
+    markers.value.push({
+      marker,
+      infowindow,
+    });
+  });
+
+  // 첫 번째 마커의 위치로 지도 중심 이동
+  if (firstMarkerPosition) {
+    console.log(firstMarkerPosition);
+    map.value.setCenter(firstMarkerPosition);
+  }
+};
 // itemss와 itemssSelectedState를 동기화
 const syncSelectedState = () => {
   if (!itemssSelectedState.value[selectedDay.value]) {
-    itemssSelectedState.value[selectedDay.value] = itemss.value.map(
+    itemssSelectedState.value[selectedDay.value] = updatedTripList.value.map(
       () => false
     );
   }
@@ -383,9 +582,9 @@ const syncSelectedState = () => {
   }
 
   // itemss의 selected 상태를 items를 기준으로 갱신
-  itemss.value.forEach((item, index) => {
+  updatedTripList.value.forEach((item, index) => {
     const isSelected = items.value[selectedDay.value].some(
-      (selectedItem) => selectedItem.id === item.id
+      (selectedItem) => selectedItem.no === item.no
     );
     item.selected = isSelected;
     itemssSelectedState.value[selectedDay.value][index] = isSelected;
@@ -394,7 +593,7 @@ const syncSelectedState = () => {
 
 const toggleSelected = (item, index) => {
   if (!itemssSelectedState.value[selectedDay.value]) {
-    itemssSelectedState.value[selectedDay.value] = itemss.value.map(
+    itemssSelectedState.value[selectedDay.value] = updatedTripList.value.map(
       () => false
     );
   }
@@ -408,21 +607,16 @@ const toggleSelected = (item, index) => {
   item.selected = isSelected;
   if (isSelected) {
     // 선택된 아이템을 items 배열에 추가
-    items.value[selectedDay.value].push({
-      id: item.id,
-      image: item.image,
-      title: item.title,
-      description: item.description,
-    });
+    items.value[selectedDay.value].push(item);
   } else {
     // 선택 해제된 아이템을 items 배열에서 제거
     items.value[selectedDay.value] = items.value[selectedDay.value].filter(
-      (i) => i.id !== item.id
+      (i) => i.no !== item.no
     );
   }
 };
 
-const selectedTag = ref("0"); // 현재 선택된 태그 저장
+const selectedTag = ref(); // 현재 선택된 태그 저장
 
 const scrollContainer = ref(null);
 
@@ -439,8 +633,19 @@ const scrollRight = () => {
 };
 // 태그 클릭 함수
 const toggleTag = (tag) => {
-  selectedTag.value = tag; // 태그 선택
-  console.log("선택된 태그:", selectedTag.value);
+  if (
+    searchModel.value.selectedRecommendationType.content_type_id ===
+    tag.content_type_id
+  ) {
+    searchModel.value.selectedRecommendationType = {
+      content_type_id: null,
+      content_type_name: "선택",
+    };
+  } else {
+    searchModel.value.selectedRecommendationType = tag;
+  }
+  console.log("tag click");
+  handleSearch();
 };
 const filteredPlaces = computed(() => {
   return places.value.filter((place) => place.name.includes(searchQuery.value));
@@ -464,12 +669,7 @@ const toggleSidebar = async () => {
 };
 
 const saveTravel = () => {
-  console.log("Travel saved:", {
-    travelTitle: travelTitle.value,
-    startDate: startDate.value,
-    endDate: endDate.value,
-    selectedRegion: selectedRegion.value,
-  });
+  console.log("SaveTravel");
 };
 
 // 안전하게 차트를 렌더링하는 함수
@@ -517,15 +717,15 @@ const renderChart = async () => {
     },
   });
 };
-const removeItem = (id) => {
+const removeItem = (no) => {
   if (items.value[selectedDay.value]) {
     items.value[selectedDay.value] = items.value[selectedDay.value].filter(
-      (item) => item.id !== id
+      (item) => item.no !== no
     );
   }
 
-  itemss.value.forEach((item, index) => {
-    if (item.id === id) {
+  updatedTripList.value.forEach((item, index) => {
+    if (item.no === no) {
       itemssSelectedState.value[selectedDay.value][index] = false;
       item.selected = false;
     }
@@ -566,8 +766,32 @@ watch(selectedDay, () => {
   syncSelectedState();
 });
 
+watch(
+  () => searchModel.value.selectedLocation,
+  (newValue, oldValue) => {
+    console.log(newValue, oldValue);
+    if (newValue && newValue !== oldValue) {
+      console.log("위치 선택");
+      handleSearch();
+    }
+  },
+  { deep: true } // 객체 변경을 감지하기 위해 깊은 감시 설정
+);
+
 // Lifecycle hooks
 onMounted(() => {
+  if (window.kakao && window.kakao.maps) {
+    initMap();
+  } else {
+    const script = document.createElement("script");
+    /* global kakao */
+    script.onload = () => kakao.maps.load(initMap);
+    script.src =
+      "http://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=80a51ca8893edecb0612a0ba5858c1ad";
+
+    document.head.appendChild(script);
+  }
+
   syncSelectedState();
   if (currentStep.value === 1 && sidebarOpen.value) {
     renderChartWithDelay();
