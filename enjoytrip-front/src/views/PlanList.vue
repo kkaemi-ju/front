@@ -39,7 +39,7 @@
               v-for="plan in plans"
               :key="plan.id"
               class="hover:bg-[#FFFBE6]/50 transition-colors cursor-pointer"
-              @click="viewPlanDetails(plan.id)"
+              @click="viewPlanDetails(plan.tripPlanId)"
             >
               <td class="px-6 py-4 text-sm text-gray-600">{{ plan.id }}</td>
               <td class="px-6 py-4">
@@ -71,32 +71,37 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import axios from "axios";
 import { PlusIcon } from "lucide-vue-next";
 import { useRouter } from "vue-router";
+import { useUserStore } from "@/stores/user";
+import { storeToRefs } from "pinia";
+const userStore = useUserStore();
+const { userInfo } = storeToRefs(userStore);
 import DateRangeModal from "../components/modal/SelectDate.vue";
 
 const isModalVisible = ref(false);
 const selectedDateRange = ref(null);
 const router = useRouter();
 
-const plans = ref([
-  {
-    id: 1,
-    title: "제주도 힐링 여행",
-    dateRange: "2024.01.01~2024.01.02",
-  },
-  {
-    id: 2,
-    title: "부산 맛집 투어",
-    dateRange: "2024.01.15~2024.01.17",
-  },
-  {
-    id: 3,
-    title: "강원도 스키 여행",
-    dateRange: "2024.02.01~2024.02.03",
-  },
-]);
+const plans = ref([]);
+const fetchPlans = async () => {
+  try {
+    const response = await axios.get(
+      `http://localhost/tripplan/${userInfo.value.userId}`
+    );
+    console.log(response);
+    plans.value = response.data.map((plan, index) => ({
+      tripPlanId: plan.tripPlanId,
+      id: index + 1, // 순차적으로 1부터 시작하는 번호 할당
+      title: plan.tripName,
+      dateRange: `${plan.startDate}~${plan.endDate}`,
+    }));
+  } catch (error) {
+    console.error("Error fetching trip plans:", error);
+  }
+};
 const calculateDays = (startDate, endDate) => {
   if (!startDate || !endDate) return 0; // 날짜가 없으면 0 반환
 
@@ -132,25 +137,25 @@ const handleDateSelection = (dateRange) => {
   closeModal();
 };
 
-const formatDate = (date) => {
-  return date.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
-
 const addNewPlan = () => {
   // 새 여행 계획 추가 로직
   isModalVisible.value = true;
 };
 
-const viewPlanDetails = (id) => {
+const viewPlanDetails = (tripPlanId) => {
   // 여행 계획 상세 보기 로직
 
-  console.log(`여행 계획 ${id} 상세 보기`);
-  router.push("/plandetail");
+  console.log(`여행 계획 ${tripPlanId} 상세 보기`);
+  router.push({
+    name: "plandetail",
+    query: {
+      tripPlanId, // 쿼리 매개변수로 tripPlanId 전달
+    },
+  });
 };
+onMounted(() => {
+  fetchPlans(); // 컴포넌트 로드 시 데이터 가져오기
+});
 </script>
 
 <style scoped>

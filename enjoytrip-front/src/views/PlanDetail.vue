@@ -28,16 +28,28 @@
         <div class="w-[160px] bg-white border-r flex flex-col justify-between">
           <div class="h-screen flex flex-col items-center p-4 bg-gray-100">
             <div class="flex-1 w-full max-w-md overflow-y-auto space-y-4 mb-4">
-              <div v-for="day in days" :key="day" class="flex justify-center">
+              <div
+                v-for="(day, index) in days"
+                :key="day"
+                class="flex justify-center"
+              >
                 <button
-                  class="w-full max-w-xs py-4 bg-white rounded-lg shadow text-lg font-bold hover:bg-gray-50 transition-colors duration-200"
+                  @click="selectDay(index)"
+                  :class="[
+                    'w-full rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200 font-medium text-center',
+                  ]"
+                  :style="{
+                    backgroundColor:
+                      currentDay === index ? '#00712D' : '#FFFFFF',
+                    color: currentDay === index ? '#FFFFFF' : '#00712D',
+                  }"
                 >
                   {{ day }}
                 </button>
               </div>
             </div>
             <button
-              class="w-full max-w-xs py-4 bg-white border border-black rounded-lg shadow text-lg font-bold hover:bg-gray-50 transition-colors duration-200"
+              class="w-full border-2 border-primary text-primary rounded-full py-3 px-6 flex items-center justify-center relative"
             >
               편집
             </button>
@@ -47,22 +59,24 @@
         <!-- Content Area -->
         <div class="flex-1 bg-white">
           <div class="h-screen flex flex-col p-4 bg-gray-100">
-            <h1 class="text-2xl font-bold mb-4">제주도 여행지</h1>
+            <h1 class="text-2xl font-bold mb-4">지역이 나오자</h1>
             <div class="flex-1 overflow-y-auto">
               <TransitionGroup name="list" tag="div">
                 <div
-                  v-for="item in items"
-                  :key="item.id"
+                  v-for="item in items[currentDay]"
+                  :key="item.no"
                   class="flex items-center mb-4 p-4 bg-white rounded-lg shadow"
                 >
                   <img
-                    :src="item.image"
+                    :src="item.firstImage1 || 'src/assets/img/no-img.png'"
                     alt="Item image"
                     class="w-20 h-20 rounded-lg object-cover mr-4"
                   />
                   <div class="flex-1">
                     <h2 class="font-bold text-lg">{{ item.title }}</h2>
-                    <p class="text-gray-600">{{ item.description }}</p>
+                    <p class="text-gray-600">
+                      {{ item.addr1 }} {{ item.addr2 }}
+                    </p>
                   </div>
                 </div>
               </TransitionGroup>
@@ -88,11 +102,13 @@
       </button>
 
       <!-- Right Content Area (Map Placeholder) -->
-      <div class="flex-1 bg-gray-50 min-h-[calc(100vh-64px)]">
-        <div class="h-full flex items-center justify-center text-gray-400">
-          암튼차트
-        </div>
-      </div>
+      <div
+        ref="mapContainer"
+        :class="[
+          'flex-1 bg-gray-50 min-h-[calc(100vh-64px)] rounded-lg',
+          sidebarOpen ? '' : 'w-full',
+        ]"
+      ></div>
     </div>
   </div>
 </template>
@@ -108,96 +124,82 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
 } from "lucide-vue-next";
-import Chart from "chart.js/auto";
-import { useRouter } from "vue-router";
+import axios from "axios";
+import { useRouter, useRoute } from "vue-router";
+import { useUserStore } from "@/stores/user";
+import { storeToRefs } from "pinia";
+const userStore = useUserStore();
+const { userInfo } = storeToRefs(userStore);
+
 const router = useRouter();
+const route = useRoute();
+const tripPlanId = ref(null);
 
 const startDate = ref("");
 const endDate = ref("");
 const selectedRegion = ref("");
 const sidebarOpen = ref(true);
-const currentStep = ref(1);
+
 const travelTitle = ref("여행계획");
 let chartInstance = null;
 
-const searchQuery = ref("");
-const days = ref([
-  "1일차",
-  "2일차",
-  "3일차",
-  "4일차",
-  "5일차",
-  "6일차",
-  "7일차",
-  "8일차",
-  "9일차",
-  "10일차",
-  "11일차",
-  "12일차",
-  "13일차",
-  "14일차",
-  "15일차",
-]);
-const items = ref([
-  {
-    id: 1,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "순풍해장국",
-    description: "대한민국 제주특별자치도 제주시",
-  },
-  {
-    id: 2,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "제주 해도미락 애월",
-    description: "대한민국 제주특별자치도 제주시",
-  },
-  {
-    id: 3,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "성산 일출봉",
-    description: "대한민국 서귀포시 성산 일출봉",
-  },
-  {
-    id: 4,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "제주동문시장",
-    description: "대한민국 제주특별자치도 제주시",
-  },
-  {
-    id: 5,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "섭지코지",
-    description: "대한민국 제주특별자치도 서귀포시",
-  },
-  {
-    id: 6,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "협재해변",
-    description: "제주시 협재해변",
-  },
-  {
-    id: 7,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "우도",
-    description: "제주시 우도",
-  },
-  {
-    id: 8,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "제주오설록 티뮤지엄",
-    description: "대한민국 서귀포시",
-  },
-  {
-    id: 9,
-    image: "/placeholder.svg?height=80&width=80",
-    title: "새별오름",
-    description: "제주시 새별오름",
-  },
-]);
-const selectedTag = ref("0"); // 현재 선택된 태그 저장
+const days = ref([]); // 일차 정보 (예: "1일차", "2일차")
+const items = ref([]); // 이중 배열: 각 일차별로 아이템 저장
+const currentDay = ref(0); // 현재 선택된 일차
+const originalLocations = [
+  { sido_code: 1, sido_name: "서울" },
+  { sido_code: 2, sido_name: "인천" },
+  { sido_code: 3, sido_name: "대전" },
+  { sido_code: 4, sido_name: "대구" },
+  { sido_code: 5, sido_name: "광주" },
+  { sido_code: 6, sido_name: "부산" },
+  { sido_code: 7, sido_name: "울산" },
+  { sido_code: 8, sido_name: "세종특별자치시" },
+  { sido_code: 31, sido_name: "경기도" },
+  { sido_code: 32, sido_name: "강원특별자치도" },
+  { sido_code: 33, sido_name: "충청북도" },
+  { sido_code: 34, sido_name: "충청남도" },
+  { sido_code: 35, sido_name: "경상북도" },
+  { sido_code: 36, sido_name: "경상남도" },
+  { sido_code: 37, sido_name: "전북특별자치도" },
+  { sido_code: 38, sido_name: "전라남도" },
+  { sido_code: 39, sido_name: "제주도" },
+];
 
-const scrollContainer = ref(null);
+// 지역별 중심좌표
+const locationCoordinates = {
+  서울: { lat: 37.5665, lng: 126.978 },
+  인천: { lat: 37.4563, lng: 126.7052 },
+  대전: { lat: 36.3504, lng: 127.3845 },
+  대구: { lat: 35.8714, lng: 128.6014 },
+  광주: { lat: 35.1595, lng: 126.8526 },
+  부산: { lat: 35.1796, lng: 129.0756 },
+  울산: { lat: 35.5395, lng: 129.3114 },
+  세종특별자치시: { lat: 36.4803, lng: 127.289 },
+  경기도: { lat: 37.4138, lng: 127.5183 },
+  강원특별자치도: { lat: 37.8228, lng: 128.1555 },
+  충청북도: { lat: 36.6356, lng: 127.4917 },
+  충청남도: { lat: 36.5184, lng: 126.8 },
+  경상북도: { lat: 36.4919, lng: 128.8886 },
+  경상남도: { lat: 35.4606, lng: 128.2132 },
+  전북특별자치도: { lat: 35.7175, lng: 127.153 },
+  전라남도: { lat: 34.8679, lng: 126.991 },
+  제주도: { lat: 33.4996, lng: 126.5312 },
+};
 
+const markers = ref([]); // 마커들을 저장할 배열
+const linePath = ref([]); // 경로 좌표 배열
+const polylines = ref([]); // 폴리라인 객체
+const distanceOverlays = ref([]); // 거리 정보 오버레이
+
+const mapContainer = ref(null);
+const map = ref(null);
+
+// 특정 일차 선택
+const selectDay = (dayIndex) => {
+  currentDay.value = dayIndex;
+  createMarkersAndPolyline();
+};
 const toggleSidebar = async () => {
   sidebarOpen.value = !sidebarOpen.value;
 
@@ -207,86 +209,176 @@ const toggleSidebar = async () => {
     chartInstance.resize(); // 차트 크기 재조정
   }
 };
+const fetchPlanDetails = async (tripPlanId) => {
+  try {
+    const response = await axios.get(
+      `http://localhost/tripplan/details/${tripPlanId}`
+    );
 
-// 안전하게 차트를 렌더링하는 함수
-const renderChartWithDelay = () => {
-  setTimeout(async () => {
-    await renderChart();
-  }, 100); // 100ms 지연 (렌더링 안정화)
+    const data = response.data;
+
+    // 제목, 날짜 설정
+    travelTitle.value = data.tripName;
+    startDate.value = data.startDate;
+    endDate.value = data.endDate;
+    // 일차별 데이터 초기화
+    const totalDays =
+      Math.ceil(
+        (new Date(endDate.value) - new Date(startDate.value)) /
+          (1000 * 60 * 60 * 24)
+      ) + 1;
+    for (let i = 0; i < totalDays; i++) {
+      days.value.push(`${i + 1}일차`);
+      items.value.push([]); // 각 일차별로 빈 배열 추가
+    }
+
+    // 데이터 분배
+    data.attractions.forEach((attraction) => {
+      const dayIndex = attraction.dayNumber - 1; // dayNumber 기준으로 일차 구분 (0-based)
+      if (items.value[dayIndex]) {
+        items.value[dayIndex].push(attraction); // 해당 일차 배열에 데이터 추가
+      }
+    });
+
+    // 일차별로 visitOrder 기준 정렬
+    items.value.forEach((dayItems) => {
+      dayItems.sort((a, b) => a.visitOrder - b.visitOrder);
+    });
+  } catch (error) {
+    console.error("Error fetching trip details:", error);
+  }
 };
 
-const renderChart = async () => {
-  await nextTick(); // DOM 렌더링 후 실행
-  const canvas = document.getElementById("chart");
-  if (!canvas) return;
-
-  const ctx = canvas.getContext("2d");
-
-  // 기존 차트 제거
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
+const initMap = () => {
+  if (!mapContainer.value) {
+    console.error("mapContainer가 초기화되지 않았습니다.");
+    return;
   }
 
-  // 새 차트 생성
-  chartInstance = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: ["Fruits and Veggies", "Good Carbs", "Protein"],
-      datasets: [
-        {
-          data: [40, 25, 25],
-          backgroundColor: ["#FAD6A5", "#FF7A7A", "#82E3C9"],
-          borderWidth: 1,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false, // 부모 요소의 비율을 유지하지 않음
-      plugins: {
-        legend: {
-          display: true,
-          position: "bottom",
-        },
-      },
-    },
+  const options = {
+    center: new kakao.maps.LatLng(33.450701, 126.570667), // Default center
+    level: 9, // Zoom level
+  };
+
+  map.value = new kakao.maps.Map(mapContainer.value, options);
+};
+
+const createMarkersAndPolyline = () => {
+  // 좌표를 기반으로 마커 및 선 생성
+  clearMarkersAndPolyline();
+  linePath.value = []; // 초기화
+  console.log(items.value[currentDay.value]);
+  items.value[currentDay.value].forEach((coord, index) => {
+    const position = new kakao.maps.LatLng(coord.latitude, coord.longitude);
+    linePath.value.push(position);
+
+    // 마커 생성 및 지도에 추가
+    const marker = new kakao.maps.Marker({
+      map: map.value,
+      position,
+    });
+    markers.value = [...markers.value, marker];
+
+    // 마커 클릭 시 인포윈도우 표시
+    const infoContent = `<div style="padding:5px;">Point ${index + 1}</div>`;
+    const infowindow = new kakao.maps.InfoWindow({
+      content: infoContent,
+    });
+    kakao.maps.event.addListener(marker, "mouseover", () =>
+      infowindow.open(map.value, marker)
+    );
+    kakao.maps.event.addListener(marker, "mouseout", () => infowindow.close());
+
+    if (index > 0) {
+      const start = linePath.value[index - 1];
+      const end = linePath.value[index];
+
+      const polyline = new kakao.maps.Polyline({
+        map: map.value,
+        path: [start, end],
+        strokeWeight: 3,
+        strokeColor: "#db4040",
+        strokeOpacity: 1,
+        strokeStyle: "solid",
+      });
+      polylines.value.push(polyline);
+
+      // 거리 표시
+      const distance = Math.round(polyline.getLength());
+      addDistanceOverlay(start, end, distance);
+    }
   });
 };
+const addDistanceOverlay = (start, end, distance) => {
+  // 두 지점의 중간 위치 계산
 
-const removeItem = (id) => {
-  items.value = items.value.filter((item) => item.id !== id);
+  const midPosition = new kakao.maps.LatLng(
+    (start.getLat() + end.getLat()) / 2,
+    (start.getLng() + end.getLng()) / 2
+  );
+
+  // 거리 정보 표시
+  const content = `<div style="padding:5px; background: white; border: 1px solid #ccc; border-radius: 3px;">${distance}m</div>`;
+  const overlay = new kakao.maps.CustomOverlay({
+    content,
+    map: map.value,
+    position: midPosition,
+    yAnchor: 0.5,
+    xAnchor: 0.5,
+  });
+
+  distanceOverlays.value.push(overlay);
 };
 
-const moveItem = (index, direction) => {
-  if (
-    (direction === -1 && index > 0) ||
-    (direction === 1 && index < items.value.length - 1)
-  ) {
-    const newIndex = index + direction;
-    const itemToMove = items.value[index];
-    items.value.splice(index, 1);
-    items.value.splice(newIndex, 0, itemToMove);
-  }
-};
-
-// Watchers
-watch([currentStep, sidebarOpen], async ([step, open]) => {
-  if (step === 1 && open) {
-    await renderChart();
-  } else {
-    if (chartInstance) {
-      chartInstance.destroy();
-      chartInstance = null;
+const clearMarkersAndPolyline = () => {
+  // 기존 마커 제거
+  markers.value.forEach((marker) => {
+    if (marker && typeof marker.setMap === "function") {
+      marker.setMap(null); // 지도에서 마커 제거
     }
-  }
-});
+  });
+  markers.value = []; // 빈 배열로 초기화하여 Vue 상태 업데이트
 
+  // 선 제거
+  polylines.value.forEach((polyline) => {
+    if (polyline && typeof polyline.setMap === "function") {
+      polyline.setMap(null); // 지도에서 선 제거
+    }
+  });
+  polylines.value = []; // 초기화
+
+  // 거리 오버레이 제거
+  distanceOverlays.value.forEach((overlay) => {
+    if (overlay && typeof overlay.setMap === "function") {
+      overlay.setMap(null); // 지도에서 오버레이 제거
+    }
+  });
+  distanceOverlays.value = []; // 초기화
+
+  // 경로 초기화
+  linePath.value = [];
+};
 // Lifecycle hooks
-onMounted(() => {
-  if (currentStep.value === 1 && sidebarOpen.value) {
-    renderChartWithDelay();
+onMounted(async () => {
+  tripPlanId.value = route.query.tripPlanId;
+  console.log(`Received tripPlanId: ${tripPlanId.value}`);
+  await fetchPlanDetails(tripPlanId.value);
+
+  if (window.kakao && window.kakao.maps) {
+    initMap();
+  } else {
+    const script = document.createElement("script");
+    /* global kakao */
+    script.onload = () => kakao.maps.load(initMap);
+    script.src =
+      "http://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=80a51ca8893edecb0612a0ba5858c1ad";
+
+    document.head.appendChild(script);
   }
+  const newCenter = new kakao.maps.LatLng(35.8714, 128.6014);
+
+  map.value.setCenter(newCenter);
+  createMarkersAndPolyline();
 });
 
 onUnmounted(() => {
@@ -324,5 +416,35 @@ canvas {
 
 .list-move {
   transition: transform 0.3s ease;
+}
+:root {
+  --color-primary: #00712d;
+  --color-secondary: #d5ed9f;
+  --color-cream: #fffbe6;
+  --color-orange: #ff9100;
+}
+
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.bg-secondary {
+  background-color: var(--color-secondary);
+}
+
+.bg-cream {
+  background-color: var(--color-cream);
+}
+
+.bg-orange {
+  background-color: var(--color-orange);
+}
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+.border-primary {
+  border-color: var(--color-primary);
 }
 </style>

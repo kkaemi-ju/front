@@ -5,14 +5,13 @@ import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import { AlertTriangle } from "lucide-vue-next";
 export const useUserStore = defineStore("userStore", () => {
-
   const router = useRouter();
   const isLoggedIn = ref(false);
   const showLoginModal = ref(false);
   const isValidToken = ref(false);
   const userInfo = ref(null);
   const setUserInfo = (newUserInfo) => {
-    console.log(newUserInfo)
+    console.log(newUserInfo);
     userInfo.value = newUserInfo;
   };
   const userLogin = async (loginUser) => {
@@ -34,7 +33,7 @@ export const useUserStore = defineStore("userStore", () => {
       isValidToken.value = true;
     } catch (error) {
       console.error("로그인 중 오류가 발생했습니다.", error);
-      alert("아이디 또는 비밀번호를 확인해주세요.")
+      alert("아이디 또는 비밀번호를 확인해주세요.");
       isLoggedIn.value = false;
       isValidToken.value = false;
     }
@@ -54,9 +53,8 @@ export const useUserStore = defineStore("userStore", () => {
         isValidToken.value = false;
         router.push("/");
       } else {
-        console.log("유저 정보 없음!")
+        console.log("유저 정보 없음!");
       }
-
     } catch (error) {
       console.log("로그아웃 중 오류가 발생했습니다.", error);
     }
@@ -64,8 +62,6 @@ export const useUserStore = defineStore("userStore", () => {
 
   const getUserInfo = async (token) => {
     try {
-
-
       // JWT 토큰 디코드
       const decodedToken = jwtDecode(token);
       console.log("디코딩된 토큰:", decodedToken);
@@ -97,53 +93,51 @@ export const useUserStore = defineStore("userStore", () => {
   };
 
   const tokenRegenerate = async () => {
-
-    try{
-    const response = await axios.post(
-      'http://localhost/user/refresh', JSON.stringify(userInfo.value),
-      {
-        headers: {
-          "Content-Type": "application/json;charset=utf-8",
-          refreshToken: sessionStorage.getItem("refreshToken"),
-        },
-      }
-    );
-
-    if (response.status === 201) {
-      const newAccessToken = response.data["access-token"];
-      sessionStorage.setItem("accessToken", newAccessToken);
-      isValidToken.value = true;
-      console.log("토큰 재발급 성공:", newAccessToken);
-
-    } else {
-      throw new Error("토큰 재발급 실패");
-    }
-  } catch (error) {
-    // HttpStatus.UNAUTHORIZE(401) : RefreshToken 기간 만료 >> 다시 로그인!!!!
-    console.error("리프레시 토큰 만료:", error);
-    // 다시 로그인 전 DB에 저장된 RefreshToken 제거.
     try {
-      const logoutResponse = await axios.get(
-        `http://localhost/user/logout/${userInfo.value.userid}`
+      const response = await axios.post(
+        "http://localhost/user/refresh",
+        JSON.stringify(userInfo.value),
+        {
+          headers: {
+            "Content-Type": "application/json;charset=utf-8",
+            refreshToken: sessionStorage.getItem("refreshToken"),
+          },
+        }
       );
-      if (logoutResponse.status === 200) {
-        console.log("리프레시 토큰 제거 성공")
-      } else {
-        console.log("리프레시 토큰 제거 실패")
-      }
-      alert("RefreshToken 기간 만료!!! 다시 로그인해 주세요.")
-      isLoggedIn.value = false
-      userInfo.value = null
-      isValidToken.value = false
-      //router.push({ name: "user-login" })
-    } catch (error){
-      console.error(error)
-      isLogin.value = false
-      userInfo.value = null
-    }
 
-  }
-  }
+      if (response.status === 201) {
+        const newAccessToken = response.data["access-token"];
+        sessionStorage.setItem("accessToken", newAccessToken);
+        isValidToken.value = true;
+        console.log("토큰 재발급 성공:", newAccessToken);
+      } else {
+        throw new Error("토큰 재발급 실패");
+      }
+    } catch (error) {
+      // HttpStatus.UNAUTHORIZE(401) : RefreshToken 기간 만료 >> 다시 로그인!!!!
+      console.error("리프레시 토큰 만료:", error);
+      // 다시 로그인 전 DB에 저장된 RefreshToken 제거.
+      try {
+        const logoutResponse = await axios.get(
+          `http://localhost/user/logout/${userInfo.value.userid}`
+        );
+        if (logoutResponse.status === 200) {
+          console.log("리프레시 토큰 제거 성공");
+        } else {
+          console.log("리프레시 토큰 제거 실패");
+        }
+        alert("RefreshToken 기간 만료!!! 다시 로그인해 주세요.");
+        isLoggedIn.value = false;
+        userInfo.value = null;
+        isValidToken.value = false;
+        //router.push({ name: "user-login" })
+      } catch (error) {
+        console.error(error);
+        isLoggedIn.value = false;
+        userInfo.value = null;
+      }
+    }
+  };
 
   return {
     isLoggedIn,
@@ -153,6 +147,6 @@ export const useUserStore = defineStore("userStore", () => {
     userLogin,
     userLogout,
     getUserInfo,
-    setUserInfo
+    setUserInfo,
   };
 });

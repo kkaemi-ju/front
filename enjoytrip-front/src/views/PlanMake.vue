@@ -274,7 +274,6 @@
         ]"
         :style="{
           left: sidebarOpen ? (currentStep === 2 ? '850px' : '500px') : '0px',
-          // 항상 부모 요소의 가운데에 위치
         }"
       >
         <ChevronLeftIcon v-if="sidebarOpen" class="h-5 w-5" />
@@ -284,7 +283,10 @@
       <!-- Right Content Area (Map Placeholder) -->
       <div
         ref="mapContainer"
-        class="flex-1 bg-gray-50 min-h-[calc(100vh-64px)] rounded-lg"
+        :class="[
+          'flex-1 bg-gray-50 min-h-[calc(100vh-64px)] rounded-lg',
+          sidebarOpen ? '' : 'w-full',
+        ]"
       ></div>
     </div>
   </div>
@@ -311,13 +313,10 @@ const { userInfo } = storeToRefs(userStore);
 
 const router = useRouter();
 const route = useRoute();
-const showDatePicker = ref(false);
-const startDate = route.query.startdate;
-const endDate = route.query.enddate;
-const selectedRegion = ref("");
+
 const sidebarOpen = ref(true);
 const currentStep = ref(1);
-const travelTitle = ref("");
+
 let chartInstance = null;
 //api 요청을 위한 data
 const tripPlan = ref({
@@ -325,9 +324,8 @@ const tripPlan = ref({
   startDate: new Date(route.query.startdate).toISOString().split("T")[0],
   endDate: new Date(route.query.enddate).toISOString().split("T")[0],
   userId: userInfo.value.userId,
+  days: [],
 });
-const dayPlan = ref([]);
-const dayPlanAttractions = ref([]);
 
 const days = Array.from(
   { length: Number(route.query.day) },
@@ -678,11 +676,14 @@ const toggleSidebar = async () => {
 };
 
 const saveTravel = async () => {
+  if (tripPlan.value.tripName === "") {
+    alert("여행 제목을 입력해주세요.");
+    return;
+  }
   const currentDate = new Date(route.query.startdate);
   const eDate = new Date(route.query.enddate);
   let idx = 0;
-  console.log(currentDate);
-  console.log(route.query.enddate);
+  tripPlan.value.days = [];
   while (currentDate <= eDate) {
     // YYYY-MM-DD 형식으로 문자열 변환
     const formattedDate = currentDate.toISOString().split("T")[0];
@@ -701,22 +702,18 @@ const saveTravel = async () => {
       date: formattedDate,
       attractions: planAttractions,
     };
-    // tripPlan.value.days.push(planDay);
+    tripPlan.value.days.push(planDay);
     currentDate.setDate(currentDate.getDate() + 1);
   }
   console.log(tripPlan.value);
-  const example = {
-    tripName: "fdf",
-    startDate: "dfdf",
-    endDate: "dfds",
-    userId: "sdfsf",
-  };
   try {
     const response = await axios.post(
       `http://localhost/tripplan`,
       tripPlan.value
     );
     console.log("Trip data successfully sent:", response.data);
+    alert("여행 계획을 추가했습니다.");
+    router.push({ name: "planlist" });
   } catch (error) {
     console.error("Error sending trip data:", error);
   }
@@ -812,7 +809,25 @@ watch([currentStep, sidebarOpen], async ([step, open]) => {
     }
   }
 });
-
+// Sidebar 상태를 감시하여 지도 크기 재조정
+watch(sidebarOpen, (newValue) => {
+  nextTick(() => {
+    if (map.value) {
+      map.value.relayout(); // 지도 컨테이너 크기 재계산
+      const center = map.value.getCenter(); // 현재 중심 좌표 가져오기
+      map.value.setCenter(center); // 중심 좌표 재설정
+    }
+  });
+});
+watch(currentStep, (newValue) => {
+  nextTick(() => {
+    if (map.value) {
+      map.value.relayout(); // 지도 컨테이너 크기 재계산
+      const center = map.value.getCenter(); // 현재 중심 좌표 가져오기
+      map.value.setCenter(center); // 중심 좌표 재설정
+    }
+  });
+});
 // 일차 변경 시 itemss와 itemssSelectedState 동기화
 watch(selectedDay, () => {
   syncSelectedState();
