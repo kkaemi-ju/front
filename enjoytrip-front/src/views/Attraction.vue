@@ -238,6 +238,7 @@ const updateMapCenter = (location) => {
   markers.value.push({ marker: newMarker });
 };
 
+// 지역 선택 시 중심 업데이트
 const updateCenterLocation = () => {
   if (!scrollContainer.value || locationRefs.value.length === 0) return;
 
@@ -639,4 +640,3 @@ onUnmounted(() => {
   height: 1500px;
 }
 </style>
-ㅋㅋㅋㅋㅋ

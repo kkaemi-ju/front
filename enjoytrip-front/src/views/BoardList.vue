@@ -166,12 +166,12 @@ const postsPerPage = 15; // 페이지당 게시글 개수
 const goToPage = (page, data = null) => {
   if (page === "boardwrite") {
     // 글쓰기 넘어갈 때
-    router.push({ name: page, query: { boardId: activeBoard.value } }); // 현재 선택된 게시판 ID를 query로 전달
+    router.push({ name: page, query: { boardType: activeBoard.value } }); // 현재 선택된 게시판 ID를 query로 전달
   } else if (data) {
     // 상세보기 넘어갈 때
     router.push({
       name: page,
-      query: { boardId: activeBoard.value },
+      query: { boardType: activeBoard.value },
       params: { id: data },
     }); // 게시글 ID를 params로 전달
   } else {
@@ -234,7 +234,6 @@ const getBoard = async () => {
     });
 
     if (response.status === 200) {
-      // console.log("게시글 데이터 가져오기 성공:", response.data.articles);
       posts.value = response.data.articles.map((article, index) => ({
         id: article.boardId,
         title: article.title,
@@ -252,11 +251,10 @@ const getBoard = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   const boardId = route.query.boardId || "1"; // 쿼리에서 boardId 가져오기, 없으면 기본값 1
-
   activeBoard.value = boardId; // 활성 게시판 설정
-  getBoard(); // 기본 게시판 데이터
+  await getBoard(); // 기본 게시판 데이터
 });
 </script>
 <style scoped>
