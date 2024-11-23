@@ -69,6 +69,7 @@
           ></textarea>
         </div>
 
+        <!-- 지도-->
         <section
           class="bg-white rounded-lg shadow-md p-6"
           v-if="boardType === '2'"
@@ -352,7 +353,7 @@ const addMarker = (position, index) => {
   kakao.maps.event.addListener(marker, "mouseout", () => {
     infowindow.value.close();
   });
-
+  map.value.setLevel(2);
   marker.setMap(map.value);
   return marker;
 };
@@ -362,7 +363,7 @@ const highlightPlace = (index) => {
   const place = places.value[index];
   const position = new kakao.maps.LatLng(place.y, place.x);
   selectedPlace.value = index;
-  map.value.setLevel(map.value.getLevel() - 1);
+  map.value.setLevel(2);
   map.value.setCenter(position);
   infowindow.value.setContent(
     `<div style="padding:10px;">${place.place_name}</div>`
@@ -529,7 +530,7 @@ const goBackToDetail = (page) => {
   if (confirmResult) {
     router.push({
       name: page,
-      query: { boardId: boardType.value },
+      query: { boardType: boardType.value },
       params: { id: boardId.value },
     });
   }
