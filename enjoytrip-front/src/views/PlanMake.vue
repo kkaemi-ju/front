@@ -9,7 +9,7 @@
         <div class="flex items-center space-x-4">
           <div class="relative">
             <input
-              v-model="travelTitle"
+              v-model="tripPlan.tripName"
               type="text"
               placeholder="여행 제목"
               class="px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#00712D]"
@@ -304,6 +304,10 @@ import {
 import Chart from "chart.js/auto";
 import { useRouter, useRoute } from "vue-router";
 import axios from "axios";
+import { useUserStore } from "@/stores/user";
+import { storeToRefs } from "pinia";
+const userStore = useUserStore();
+const { userInfo } = storeToRefs(userStore);
 
 const router = useRouter();
 const route = useRoute();
@@ -315,6 +319,15 @@ const sidebarOpen = ref(true);
 const currentStep = ref(1);
 const travelTitle = ref("");
 let chartInstance = null;
+//api 요청을 위한 data
+const tripPlan = ref({
+  tripName: "",
+  startDate: new Date(route.query.startdate).toISOString().split("T")[0],
+  endDate: new Date(route.query.enddate).toISOString().split("T")[0],
+  userId: userInfo.value.userId,
+});
+const dayPlan = ref([]);
+const dayPlanAttractions = ref([]);
 
 const days = Array.from(
   { length: Number(route.query.day) },
@@ -393,6 +406,10 @@ const searchModel = ref({
 const tripList = ref([]);
 const updatedTripList = ref([]);
 const markers = ref([]); // 마커들을 저장할 배열
+const linePath = ref([]); // 경로 좌표 배열
+const polylines = ref([]); // 폴리라인 객체
+const distanceOverlays = ref([]); // 거리 정보 오버레이
+
 const mapContainer = ref(null);
 const map = ref(null);
 const markerImageSrc =
@@ -417,6 +434,102 @@ const initMap = () => {
   };
 
   map.value = new kakao.maps.Map(mapContainer.value, options);
+};
+const createMarkersAndPolyline = () => {
+  // 좌표를 기반으로 마커 및 선 생성
+  clearMarkersAndPolyline();
+  linePath.value = []; // 초기화
+
+  items.value[selectedDay.value].forEach((coord, index) => {
+    const position = new kakao.maps.LatLng(coord.latitude, coord.longitude);
+    linePath.value.push(position);
+
+    // 마커 생성 및 지도에 추가
+    const marker = new kakao.maps.Marker({
+      map: map.value,
+      position,
+    });
+    markers.value = [...markers.value, marker];
+
+    // 마커 클릭 시 인포윈도우 표시
+    const infoContent = `<div style="padding:5px;">Point ${index + 1}</div>`;
+    const infowindow = new kakao.maps.InfoWindow({
+      content: infoContent,
+    });
+    kakao.maps.event.addListener(marker, "mouseover", () =>
+      infowindow.open(map.value, marker)
+    );
+    kakao.maps.event.addListener(marker, "mouseout", () => infowindow.close());
+
+    if (index > 0) {
+      const start = linePath.value[index - 1];
+      const end = linePath.value[index];
+
+      const polyline = new kakao.maps.Polyline({
+        map: map.value,
+        path: [start, end],
+        strokeWeight: 3,
+        strokeColor: "#db4040",
+        strokeOpacity: 1,
+        strokeStyle: "solid",
+      });
+      polylines.value.push(polyline);
+
+      // 거리 표시
+      const distance = Math.round(polyline.getLength());
+      addDistanceOverlay(start, end, distance);
+    }
+  });
+};
+
+const addDistanceOverlay = (start, end, distance) => {
+  // 두 지점의 중간 위치 계산
+
+  const midPosition = new kakao.maps.LatLng(
+    (start.getLat() + end.getLat()) / 2,
+    (start.getLng() + end.getLng()) / 2
+  );
+
+  // 거리 정보 표시
+  const content = `<div style="padding:5px; background: white; border: 1px solid #ccc; border-radius: 3px;">${distance}m</div>`;
+  const overlay = new kakao.maps.CustomOverlay({
+    content,
+    map: map.value,
+    position: midPosition,
+    yAnchor: 0.5,
+    xAnchor: 0.5,
+  });
+
+  distanceOverlays.value.push(overlay);
+};
+
+const clearMarkersAndPolyline = () => {
+  // 기존 마커 제거
+  markers.value.forEach((marker) => {
+    if (marker && typeof marker.setMap === "function") {
+      marker.setMap(null); // 지도에서 마커 제거
+    }
+  });
+  markers.value = []; // 빈 배열로 초기화하여 Vue 상태 업데이트
+
+  // 선 제거
+  polylines.value.forEach((polyline) => {
+    if (polyline && typeof polyline.setMap === "function") {
+      polyline.setMap(null); // 지도에서 선 제거
+    }
+  });
+  polylines.value = []; // 초기화
+
+  // 거리 오버레이 제거
+  distanceOverlays.value.forEach((overlay) => {
+    if (overlay && typeof overlay.setMap === "function") {
+      overlay.setMap(null); // 지도에서 오버레이 제거
+    }
+  });
+  distanceOverlays.value = []; // 초기화
+
+  // 경로 초기화
+  linePath.value = [];
 };
 
 const handleSearch = async () => {
@@ -473,11 +586,6 @@ const handleSearch = async () => {
       ...item, // 기존 객체 내용 유지
       selected: false, // 새 key와 값 추가 (여기선 예시로 index + 2 사용)
     }));
-    console.log("selected");
-    console.log(items.value.length);
-    for (let trip of items.value) {
-      console.log(trip);
-    }
     const coordinates =
       locationCoordinates[sidoMapping[searchModel.value.selectedLocation]];
     const newCenter = new kakao.maps.LatLng(coordinates.lat, coordinates.lng);
@@ -489,131 +597,33 @@ const handleSearch = async () => {
   }
 };
 
-const addMarkers = () => {
-  // 기존 마커 제거
-  if (markers.value && Array.isArray(markers.value)) {
-    markers.value.forEach((item) => {
-      if (item && item.marker) {
-        item.marker.setMap(null); // 기존 마커를 지도에서 제거
-      }
-    });
-  }
-  markers.value = []; // 기존 마커 목록 초기화
-
-  // 첫 번째 마커의 위치를 저장할 변수
-  let firstMarkerPosition = null;
-
-  updatedTripList.value.forEach((trip, index) => {
-    if (!trip.latitude || !trip.longitude) return; // 유효한 좌표만 처리
-
-    // 마커 위치
-    const markerPosition = new kakao.maps.LatLng(trip.latitude, trip.longitude);
-
-    // 첫 번째 마커의 위치를 저장
-    if (index === 0) {
-      firstMarkerPosition = markerPosition;
-    }
-
-    // 마커 이미지 설정
-    const imageSize = new kakao.maps.Size(24, 35);
-    const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
-
-    // 마커 생성
-    const marker = new kakao.maps.Marker({
-      map: map.value,
-      position: markerPosition,
-      title: trip.title,
-      image: markerImage,
-    });
-
-    // 인포윈도우 내용
-    const infowindowContent = `
-  <div style="padding: 10px; max-width: 200px; word-wrap: break-word; text-align: center; overflow: hidden; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); border-radius: 8px; font-family: Arial, sans-serif;">
-    <div style="margin-bottom: 10px;">
-      <img
-        src="${trip.firstImage1 || "src/assets/img/no-img.png"}"
-        alt="${trip.title}"
-        style="width: 100%; max-width: 150px; height: auto; border-radius: 4px;"
-      />
-    </div>
-    <strong style="font-size: 14px; color: #333;">${trip.title}</strong><br>
-    <span style="font-size: 11px; color: #777; display: block; margin-top: 5px;">
-      ${trip.addr1 || ""} ${trip.addr2 || ""}
-    </span>
-  </div>
-`;
-    const infowindow = new kakao.maps.InfoWindow({
-      content: infowindowContent,
-      removable: true,
-    });
-
-    // 마커 클릭 이벤트 추가
-    kakao.maps.event.addListener(marker, "click", () => {
-      // 모든 기존 인포윈도우 닫기
-      markers.value.forEach((item) => item.infowindow.close());
-
-      // 현재 클릭된 마커의 인포윈도우 열기
-      infowindow.open(map.value, marker);
-    });
-
-    // 새 마커와 인포윈도우를 배열에 추가
-    markers.value.push({
-      marker,
-      infowindow,
-    });
-  });
-
-  // 첫 번째 마커의 위치로 지도 중심 이동
-  if (firstMarkerPosition) {
-    console.log(firstMarkerPosition);
-    map.value.setCenter(firstMarkerPosition);
-  }
-};
 // itemss와 itemssSelectedState를 동기화
 const syncSelectedState = () => {
-  if (!itemssSelectedState.value[selectedDay.value]) {
-    itemssSelectedState.value[selectedDay.value] = updatedTripList.value.map(
-      () => false
-    );
-  }
-
-  if (!items.value[selectedDay.value]) {
-    items.value[selectedDay.value] = [];
-  }
-
-  // itemss의 selected 상태를 items를 기준으로 갱신
-  updatedTripList.value.forEach((item, index) => {
-    const isSelected = items.value[selectedDay.value].some(
-      (selectedItem) => selectedItem.no === item.no
-    );
-    item.selected = isSelected;
-    itemssSelectedState.value[selectedDay.value][index] = isSelected;
+  updatedTripList.value.forEach((item) => {
+    item.selected = false; // selected를 false로 설정
   });
+  for (let selectDayItem of items.value[selectedDay.value]) {
+    for (let trip of updatedTripList.value) {
+      if (selectDayItem.no === trip.no) {
+        trip.selected = true; // 일치하는 경우 selected를 true로 설정
+      }
+    }
+  }
 };
 
 const toggleSelected = (item, index) => {
-  if (!itemssSelectedState.value[selectedDay.value]) {
-    itemssSelectedState.value[selectedDay.value] = updatedTripList.value.map(
-      () => false
-    );
-  }
-
-  if (!items.value[selectedDay.value]) {
-    items.value[selectedDay.value] = [];
-  }
-
-  const isSelected = !itemssSelectedState.value[selectedDay.value][index];
-  itemssSelectedState.value[selectedDay.value][index] = isSelected;
-  item.selected = isSelected;
-  if (isSelected) {
-    // 선택된 아이템을 items 배열에 추가
-    items.value[selectedDay.value].push(item);
+  const itemData = items.value[selectedDay.value];
+  let keyIndex = itemData.findIndex((data) => data.no === item.no);
+  if (keyIndex != -1) {
+    // 이미 선택한 아이 !!!
+    items.value[selectedDay.value].splice(keyIndex, 1);
+    updatedTripList.value[index].selected = false;
   } else {
-    // 선택 해제된 아이템을 items 배열에서 제거
-    items.value[selectedDay.value] = items.value[selectedDay.value].filter(
-      (i) => i.no !== item.no
-    );
+    items.value[selectedDay.value].push(item);
+    updatedTripList.value[index].selected = true;
+    // addCoordinate(item);
   }
+  createMarkersAndPolyline();
 };
 
 const selectedTag = ref(); // 현재 선택된 태그 저장
@@ -644,7 +654,6 @@ const toggleTag = (tag) => {
   } else {
     searchModel.value.selectedRecommendationType = tag;
   }
-  console.log("tag click");
   handleSearch();
 };
 const filteredPlaces = computed(() => {
@@ -668,7 +677,49 @@ const toggleSidebar = async () => {
   }
 };
 
-const saveTravel = () => {
+const saveTravel = async () => {
+  const currentDate = new Date(route.query.startdate);
+  const eDate = new Date(route.query.enddate);
+  let idx = 0;
+  console.log(currentDate);
+  console.log(route.query.enddate);
+  while (currentDate <= eDate) {
+    // YYYY-MM-DD 형식으로 문자열 변환
+    const formattedDate = currentDate.toISOString().split("T")[0];
+    let planAttractions = [];
+    let visitO = 0;
+    for (let pAttraction of items.value[idx++]) {
+      planAttractions.push({
+        attractionsNo: pAttraction.no,
+        visitOrder: visitO++,
+        memo: "",
+      });
+    }
+
+    let planDay = {
+      dayNumber: idx,
+      date: formattedDate,
+      attractions: planAttractions,
+    };
+    // tripPlan.value.days.push(planDay);
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  console.log(tripPlan.value);
+  const example = {
+    tripName: "fdf",
+    startDate: "dfdf",
+    endDate: "dfds",
+    userId: "sdfsf",
+  };
+  try {
+    const response = await axios.post(
+      `http://localhost/tripplan`,
+      tripPlan.value
+    );
+    console.log("Trip data successfully sent:", response.data);
+  } catch (error) {
+    console.error("Error sending trip data:", error);
+  }
   console.log("SaveTravel");
 };
 
@@ -726,10 +777,10 @@ const removeItem = (no) => {
 
   updatedTripList.value.forEach((item, index) => {
     if (item.no === no) {
-      itemssSelectedState.value[selectedDay.value][index] = false;
       item.selected = false;
     }
   });
+  createMarkersAndPolyline();
 };
 const moveItem = (index, direction) => {
   const currentItems = items.value[selectedDay.value]; // 현재 선택된 일차의 items 배열
@@ -747,6 +798,7 @@ const moveItem = (index, direction) => {
 
   // 업데이트된 items 배열을 다시 할당 (Vue의 반응형 시스템에서 감지)
   items.value[selectedDay.value] = [...currentItems];
+  createMarkersAndPolyline();
 };
 
 // Watchers
@@ -764,6 +816,8 @@ watch([currentStep, sidebarOpen], async ([step, open]) => {
 // 일차 변경 시 itemss와 itemssSelectedState 동기화
 watch(selectedDay, () => {
   syncSelectedState();
+
+  createMarkersAndPolyline();
 });
 
 watch(
@@ -791,7 +845,7 @@ onMounted(() => {
 
     document.head.appendChild(script);
   }
-
+  handleSearch();
   syncSelectedState();
   if (currentStep.value === 1 && sidebarOpen.value) {
     renderChartWithDelay();
