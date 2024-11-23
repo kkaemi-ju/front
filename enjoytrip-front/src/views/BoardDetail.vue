@@ -158,6 +158,7 @@ import { ChevronLeft, MessageSquare, ThumbsUp } from "lucide-vue-next";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import axios from "axios";
+import { attachTypeApi } from "ant-design-vue/es/message";
 
 const { userInfo } = useUserStore(); // 현재 사용자
 const router = useRouter();
@@ -165,7 +166,7 @@ const route = useRoute();
 const boardType = ref("");
 const boardId = ref("");
 const menuOpen = ref(false);
-const isLoading = ref(true); // 로딩 상태 확인
+const isLoading = ref(false); // 로딩 상태 확인
 const markerImageSrc =
   "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 마커 이미지 URL
 
@@ -181,59 +182,17 @@ const article = ref({
 
 const map = ref(null);
 const mapContainer = ref(null);
-let geocoder = null; // 전역 변수로 선언
 
-//지도 관련
 const initMap = async () => {
-  // Geocoder 객체 초기화
-  geocoder = new kakao.maps.services.Geocoder();
-  if (!mapContainer.value || map.value) return;
-
+  if (!mapContainer.value) return;
+  await nextTick(); // DOM 업데이트가 완료될 때까지 대기
+  if (map.value) return;
   const options = {
     center: new kakao.maps.LatLng(37.566826, 126.9786567),
-    level: 2,
+    level: 1,
   };
 
   map.value = new kakao.maps.Map(mapContainer.value, options);
-};
-
-// 받아온 attractionUrl로 마커 표시
-
-// 마커 추가 함수
-const addMarker = (address, attractionName) => {
-  if (!map.value || !geocoder) {
-    console.error("Map or geocoder is not initialized.");
-    return;
-  }
-
-  // 주소를 좌표로 변환
-  geocoder.addressSearch(address, (result, status) => {
-    if (status === kakao.maps.services.Status.OK) {
-      const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
-      // 마커 생성
-
-      map.value.setLevel(map.value.getLevel() - 1);
-      const imageSize = new kakao.maps.Size(24, 35);
-      const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
-      const marker = new kakao.maps.Marker({
-        map: map.value,
-        position: coords,
-        image: markerImage,
-      });
-
-      // 인포윈도우 생성
-      const infowindow = new kakao.maps.InfoWindow({
-        content: `<div style="width:150px;text-align:center;padding:6px 0; color: black;">${address} <br> ${attractionName}</div>`,
-      });
-      infowindow.open(map.value, marker);
-
-      // 지도 중심 이동
-      map.value.setCenter(coords);
-      console.log("Marker added and map centered:", coords);
-    } else {
-      console.error("Failed to convert address to coordinates:", status);
-    }
-  });
 };
 
 // 게시글 수정
@@ -243,7 +202,7 @@ const modifyArticle = () => {
     query: {
       modify: "true",
       boardId: route.params.id,
-      boardType: route.query.boardId,
+      boardType: boardType.value,
     }, // 수정모드, 게시글 id, 게시판 타입 전송
   });
 };
@@ -297,12 +256,57 @@ const getArticle = async () => {
     // 게시글 데이터 가져오기
     const response = await axios.get(`http://localhost/board/${boardId.value}`);
     article.value = response.data;
-    console.log("article : " + article.value);
     if (boardType.value === "2" && article.value.attractionUrl) {
-      await nextTick();
-      await initMap();
-      addMarker(article.value.attractionUrl, article.value.attractionName);
+      // Kakao Maps SDK 로드 확인
+      if (!window.kakao || !window.kakao.maps) {
+        console.error("Kakao Maps SDK가 로드되지 않았습니다.");
+        return;
+      }
+
+      // 주소-좌표 변환 객체 생성
+      const geocoder = new kakao.maps.services.Geocoder();
+
+      // 주소로 좌표 검색
+      geocoder.addressSearch(article.value.attractionUrl, (result, status) => {
+        if (status === kakao.maps.services.Status.OK) {
+          const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+
+          // 지도 초기화
+          const container = mapContainer.value; // ref로 참조된 mapContainer
+          const options = {
+            center: coords,
+            level: 3,
+          };
+          const map = new kakao.maps.Map(container, options);
+
+          const imageSize = new kakao.maps.Size(24, 35);
+          const markerImage = new kakao.maps.MarkerImage(
+            markerImageSrc,
+            imageSize
+          );
+          // 마커 추가
+          const marker = new kakao.maps.Marker({
+            map: map,
+            position: coords,
+            image: markerImage,
+          });
+
+          // 인포윈도우 추가
+          const infowindow = new kakao.maps.InfoWindow({
+            content: `<div style="width:150px;text-align:center;padding:6px 0;">${
+              article.value.attractionName || "장소 이름 없음"
+            }</div>`,
+          });
+          infowindow.open(map, marker);
+
+          // 지도 중심 이동
+          map.setCenter(coords);
+        } else {
+          console.error("주소를 좌표로 변환하지 못했습니다:", status);
+        }
+      });
     }
+
     // 파일 데이터 가져오기
     await fetchImages();
     isLoading.value = false;
@@ -374,50 +378,39 @@ const deleteComment = async (commentId) => {
   }
 };
 
-onMounted(async () => {
+onMounted(() => {
   boardId.value = route.params.id;
   boardType.value = route.query.boardType;
-  console.log(boardId.value);
-  console.log(boardType.value);
-  await getArticle();
   if (boardType.value === "2") {
     // Kakao Maps SDK가 로드되지 않았다면 로드
     if (!window.kakao || !window.kakao.maps) {
       const script = document.createElement("script");
-
-      script.src =
-        "https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=80a51ca8893edecb0612a0ba5858c1ad&libraries=services";
-      script.onload = async () => {
-        kakao.maps.load(async () => {
-          await getArticle();
+      script.onload = () => {
+        // SDK가 로드되면 지도 초기화
+        kakao.maps.load(() => {
+          initMap();
         });
       };
+      script.src =
+        "https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=80a51ca8893edecb0612a0ba5858c1ad&libraries=services";
       document.head.appendChild(script);
     } else {
       // 이미 SDK가 로드된 경우 바로 지도 초기화
-      kakao.maps.load(async () => {
-        await getArticle();
+      kakao.maps.load(() => {
+        initMap();
       });
     }
+    getArticle();
+  } else {
+    getArticle();
   }
 });
-
-// DOM 렌더링 되기 전에 지도 안띄우게
-// watch(boardType, async (newType) => {
-//   if (newType === "2") {
-//     await nextTick(); // DOM 렌더링 완료 대기
-//     initMap(); // 지도 초기화
-//   }
-// });
-
-// watch(
-//   () => article.value.attractionUrl,
-//   (newUrl) => {
-//     if (newUrl && map.value) {
-//       addMarker(address, attractionName);
-//     }
-//   }
-// );
+watch(boardType, async (newType) => {
+  if (newType === "2") {
+    await nextTick(); // DOM 렌더링 완료 대기
+    initMap(); // 지도 초기화
+  }
+});
 </script>
 
 <style scoped>
