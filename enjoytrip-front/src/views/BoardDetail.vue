@@ -229,6 +229,8 @@ const addMarker = (address, attractionName) => {
 
       // 지도 중심 이동
       map.value.setCenter(coords);
+      // 지도 확대
+      map.value.setLevel(2);
       console.log("Marker added and map centered:", coords);
     } else {
       console.error("Failed to convert address to coordinates:", status);
@@ -243,7 +245,7 @@ const modifyArticle = () => {
     query: {
       modify: "true",
       boardId: route.params.id,
-      boardType: route.query.boardId,
+      boardType: boardType.value,
     }, // 수정모드, 게시글 id, 게시판 타입 전송
   });
 };
