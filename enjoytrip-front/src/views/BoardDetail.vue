@@ -1,5 +1,8 @@
 <template>
-  <div v-if="article" class="min-h-screen bg-[#FFFBE6]/30 py-8">
+  <div v-if="isLoading" class="min-h-screen flex items-center justify-center">
+    <p>로딩 중...</p>
+  </div>
+  <div v-else-if="article" class="min-h-screen bg-[#FFFBE6]/30 py-8">
     <div class="container mx-auto px-4 max-w-4xl">
       <button
         class="mb-4 flex items-center text-[#00712D] hover:underline"
@@ -63,7 +66,7 @@
           <span>조회수: {{ article.view }}</span>
         </div>
         <!-- 본문 내용 -->
-        <div class="prose max-w-none mb-6 text-black text-2xl">
+        <div class="prose max-w-none mb-6 text-black text-1xl">
           <p class="whitespace-pre-line">{{ article.content }}</p>
         </div>
         <!-- 이미지 -->
@@ -78,6 +81,14 @@
             alt="게시글 이미지"
             class="w-1/2 rounded-lg mb-4"
           />
+        </div>
+        <!-- 지도 -->
+        <div class="mb-8" v-if="boardType === '2' && article">
+          <div
+            ref="mapContainer"
+            id="mapContainer"
+            class="w-full h-[500px] bg-gray-200 rounded-lg"
+          ></div>
         </div>
         <div class="flex items-center justify-end space-x-4">
           <button class="flex items-center text-gray-800 hover:text-[#00712D]">
@@ -123,7 +134,7 @@
           <textarea
             v-model="newComment"
             rows="3"
-            class="flex-grow p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#00712D]"
+            class="flex-grow p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#00712D] text-black"
             placeholder="댓글을 입력하세요..."
           ></textarea>
           <button
@@ -142,7 +153,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, nextTick, watch } from "vue";
 import { ChevronLeft, MessageSquare, ThumbsUp } from "lucide-vue-next";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
@@ -154,6 +165,9 @@ const route = useRoute();
 const boardType = ref("");
 const boardId = ref("");
 const menuOpen = ref(false);
+const isLoading = ref(true); // 로딩 상태 확인
+const markerImageSrc =
+  "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 마커 이미지 URL
 
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value;
@@ -164,6 +178,63 @@ const newComment = ref("");
 const article = ref({
   imageUrls: [], // 초기값 설정
 });
+
+const map = ref(null);
+const mapContainer = ref(null);
+let geocoder = null; // 전역 변수로 선언
+
+//지도 관련
+const initMap = async () => {
+  // Geocoder 객체 초기화
+  geocoder = new kakao.maps.services.Geocoder();
+  if (!mapContainer.value || map.value) return;
+
+  const options = {
+    center: new kakao.maps.LatLng(37.566826, 126.9786567),
+    level: 2,
+  };
+
+  map.value = new kakao.maps.Map(mapContainer.value, options);
+};
+
+// 받아온 attractionUrl로 마커 표시
+
+// 마커 추가 함수
+const addMarker = (address, attractionName) => {
+  if (!map.value || !geocoder) {
+    console.error("Map or geocoder is not initialized.");
+    return;
+  }
+
+  // 주소를 좌표로 변환
+  geocoder.addressSearch(address, (result, status) => {
+    if (status === kakao.maps.services.Status.OK) {
+      const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+      // 마커 생성
+
+      map.value.setLevel(map.value.getLevel() - 1);
+      const imageSize = new kakao.maps.Size(24, 35);
+      const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
+      const marker = new kakao.maps.Marker({
+        map: map.value,
+        position: coords,
+        image: markerImage,
+      });
+
+      // 인포윈도우 생성
+      const infowindow = new kakao.maps.InfoWindow({
+        content: `<div style="width:150px;text-align:center;padding:6px 0; color: black;">${address} <br> ${attractionName}</div>`,
+      });
+      infowindow.open(map.value, marker);
+
+      // 지도 중심 이동
+      map.value.setCenter(coords);
+      console.log("Marker added and map centered:", coords);
+    } else {
+      console.error("Failed to convert address to coordinates:", status);
+    }
+  });
+};
 
 // 게시글 수정
 const modifyArticle = () => {
@@ -217,7 +288,7 @@ const addComment = async () => {
 };
 
 const goBackToBoard = () => {
-  router.push({ path: "/board", query: { boardId: route.query.boardId } });
+  router.push({ path: "/board", query: { boardId: route.query.boardType } });
 };
 
 // 게시글 받아옴
@@ -226,15 +297,15 @@ const getArticle = async () => {
     // 게시글 데이터 가져오기
     const response = await axios.get(`http://localhost/board/${boardId.value}`);
     article.value = response.data;
-
-    if (response.status === 200) {
-      // console.log("게시글 데이터 가져오기 성공:", response.data);
-    } else {
-      console.error("게시글 못 불러옴:", response.statusText);
+    console.log("article : " + article.value);
+    if (boardType.value === "2" && article.value.attractionUrl) {
+      await nextTick();
+      await initMap();
+      addMarker(article.value.attractionUrl, article.value.attractionName);
     }
-
     // 파일 데이터 가져오기
-    fetchImages();
+    await fetchImages();
+    isLoading.value = false;
   } catch (error) {
     if (error.response) {
       console.error("서버 응답 오류:", error.response.data);
@@ -275,7 +346,6 @@ const getComments = async () => {
       `http://localhost/board/comment/${boardId.value}`
     );
     if (response.status === 200) {
-      console.log(response.data);
       comments.value = response.data;
     }
   } catch (error) {
@@ -305,31 +375,54 @@ const deleteComment = async (commentId) => {
 };
 
 onMounted(async () => {
-  // await waitForUserInfo();
-
-  // if (!userInfo.userId) {
-  //   alert("로그인이 필요합니다.");
-  //   router.push("/login");
-  //   return;
-  // }
-
   boardId.value = route.params.id;
-  getArticle();
-  getComments();
+  boardType.value = route.query.boardType;
+  console.log(boardId.value);
+  console.log(boardType.value);
+  await getArticle();
+  if (boardType.value === "2") {
+    // Kakao Maps SDK가 로드되지 않았다면 로드
+    if (!window.kakao || !window.kakao.maps) {
+      const script = document.createElement("script");
+
+      script.src =
+        "https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=80a51ca8893edecb0612a0ba5858c1ad&libraries=services";
+      script.onload = async () => {
+        kakao.maps.load(async () => {
+          await getArticle();
+        });
+      };
+      document.head.appendChild(script);
+    } else {
+      // 이미 SDK가 로드된 경우 바로 지도 초기화
+      kakao.maps.load(async () => {
+        await getArticle();
+      });
+    }
+  }
 });
 
-// const waitForUserInfo = () => {
-//   return new Promise((resolve) => {
-//     const checkUserInfo = setInterval(() => {
-//       if (userInfo && userInfo.userId) {
-//         clearInterval(checkUserInfo);
-//         resolve();
-//       }
-//     }, 50); // 50ms 간격으로 확인
-//   });
-// };
+// DOM 렌더링 되기 전에 지도 안띄우게
+// watch(boardType, async (newType) => {
+//   if (newType === "2") {
+//     await nextTick(); // DOM 렌더링 완료 대기
+//     initMap(); // 지도 초기화
+//   }
+// });
+
+// watch(
+//   () => article.value.attractionUrl,
+//   (newUrl) => {
+//     if (newUrl && map.value) {
+//       addMarker(address, attractionName);
+//     }
+//   }
+// );
 </script>
 
 <style scoped>
-/* 필요한 경우 추가적인 스타일 */
+#mapContainer {
+  width: 100%;
+  height: 500px;
+}
 </style>
