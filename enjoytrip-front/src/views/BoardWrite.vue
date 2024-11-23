@@ -424,14 +424,19 @@ const submitPost = async () => {
     alert("제목과 내용을 입력해주세요!");
     return;
   }
+
+  const selectedPlaceData = places.value[selectedPlace.value] || {};
+  const attractionUrl = selectedPlaceData.address_name || "";
+  const attractionName = selectedPlaceData.place_name || "";
+
   // 게시글 데이터 준비
   const postData = {
     userId: userInfo.userId,
     title: title.value,
     content: content.value,
     boardId: boardType.value, // 게시판 타입
-    attractionUrl: places.value[selectedPlace.value].address_name,
-    attractionName: places.value[selectedPlace.value].place_name,
+    attractionUrl: attractionUrl,
+    attractionName: attractionName,
   };
 
   try {
@@ -546,6 +551,56 @@ const modifyArticle = async () => {
     title.value = article.value.title; // 제목 설정
     content.value = article.value.content; // 내용 설정
 
+    if (boardType.value === "2" && article.value.attractionUrl) {
+      // Kakao Maps SDK 로드 확인
+      if (!window.kakao || !window.kakao.maps) {
+        console.error("Kakao Maps SDK가 로드되지 않았습니다.");
+        return;
+      }
+
+      // 주소-좌표 변환 객체 생성
+      const geocoder = new kakao.maps.services.Geocoder();
+
+      // 주소로 좌표 검색
+      geocoder.addressSearch(article.value.attractionUrl, (result, status) => {
+        if (status === kakao.maps.services.Status.OK) {
+          const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+
+          // 지도 초기화
+          const container = mapContainer.value; // ref로 참조된 mapContainer
+          const options = {
+            center: coords,
+            level: 3,
+          };
+          const map = new kakao.maps.Map(container, options);
+
+          const imageSize = new kakao.maps.Size(24, 35);
+          const markerImage = new kakao.maps.MarkerImage(
+            markerImageSrc,
+            imageSize
+          );
+          // 마커 추가
+          const marker = new kakao.maps.Marker({
+            map: map,
+            position: coords,
+            image: markerImage,
+          });
+
+          // 인포윈도우 추가
+          const infowindow = new kakao.maps.InfoWindow({
+            content: `<div style="width:150px;text-align:center;padding:6px 0;">${
+              article.value.attractionName || "장소 이름 없음"
+            }</div>`,
+          });
+          infowindow.open(map, marker);
+
+          // 지도 중심 이동
+          map.setCenter(coords);
+        } else {
+          console.error("주소를 좌표로 변환하지 못했습니다:", status);
+        }
+      });
+    }
     if (response.status === 200) {
       console.log("게시글 데이터 가져오기 성공:", response.data);
     } else {
