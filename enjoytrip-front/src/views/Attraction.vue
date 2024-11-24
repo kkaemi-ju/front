@@ -29,37 +29,34 @@
     </div>
 
     <!-- Recommendation Text with Dropdown -->
-    <div class="text-center my-8 flex items-center justify-center space-x-2">
-      <p class="text-gray-700">이 지역의</p>
-      <select
-        v-model="searchModel.selectedRecommendationType"
-        class="w-[180px] text-black h-[40px] rounded border border-gray-300 flex-shrink-0"
-      >
-        <option
-          v-for="type in recommendationTypes"
-          :key="type.content_type_id"
-          :value="type"
+    <div class="search-section">
+      <div class="region-select">
+        <span class="text-[#00712D] font-bold text-lg">이 지역의</span>
+        <select
+          v-model="searchModel.selectedRecommendationType"
+          class="select-style"
         >
-          {{ type.content_type_name }}
-        </option>
-      </select>
-      <p class="text-gray-700">추천해드려요</p>
-    </div>
+          <option
+            v-for="type in recommendationTypes"
+            :key="type.content_type_id"
+            :value="type"
+          >
+            {{ type.content_type_name }}
+          </option>
+        </select>
+        <span class="text-[#00712D] font-bold text-lg">추천해드려요</span>
+      </div>
 
-    <!-- Search Input -->
-    <div class="text-center mb-4">
-      <input
-        v-model="searchModel.searchTerm"
-        type="text"
-        placeholder="검색어를 입력하세요"
-        class="max-w-[200px] px-3 py-2 border border-gray-300 rounded-md text-black"
-      />
-      <button
-        @click="handleSearch"
-        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-      >
-        검색
-      </button>
+      <!-- Search Input -->
+      <div class="search-box">
+        <input
+          v-model="searchModel.searchTerm"
+          type="text"
+          placeholder="검색어를 입력하세요"
+          class="search-input"
+        />
+        <button @click="handleSearch" class="search-button">검색</button>
+      </div>
     </div>
 
     <!-- Map Section -->
@@ -638,5 +635,32 @@ onUnmounted(() => {
 }
 #mapContainer {
   height: 1500px;
+}
+
+.search-section {
+  @apply mt-8 space-y-4;
+}
+
+.region-select {
+  @apply flex items-center justify-center gap-3;
+}
+
+.select-style {
+  @apply px-4 py-2 rounded-full border-2 border-[#00712D] bg-white text-[#00712D]
+           font-bold focus:outline-none focus:ring-2 focus:ring-[#FF9100];
+}
+
+.search-box {
+  @apply flex justify-center gap-2;
+}
+
+.search-input {
+  @apply w-full max-w-md px-4 py-2 rounded-full border-2 border-[#00712D]
+           focus:outline-none focus:ring-2 focus:ring-[#FF9100];
+}
+
+.search-button {
+  @apply px-6 py-2 rounded-full bg-[#00712D] text-white font-bold
+           hover:bg-[#FF9100] transition-colors duration-300;
 }
 </style>

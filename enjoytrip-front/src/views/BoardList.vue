@@ -62,6 +62,7 @@
 
         <!-- 글쓰기 버튼 -->
         <button
+          v-if="canWrite"
           @click="goToPage('boardwrite')"
           class="ml-auto px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors"
         >
@@ -144,12 +145,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import axios from "axios";
 import { useRouter, useRoute } from "vue-router";
+import { useUserStore } from "@/stores/user";
+import { storeToRefs } from "pinia";
 
 const router = useRouter();
 const route = useRoute();
+const { userInfo } = useUserStore();
+
 const boards = [
   { id: "1", name: "자유게시판" },
   { id: "2", name: "핫플게시판" },
@@ -250,7 +255,22 @@ const getBoard = async () => {
     console.error("서버 요청 중 오류 발생:", error.message);
   }
 };
-
+const canWrite = computed(() => {
+  if (route.query.boardId === "3") {
+    return userInfo.role === 1; // activeBoard가 3일 때, role이 1이어야 함
+  }
+  return true;
+});
+watch(
+  () => route.query,
+  (newQuery, oldQuery) => {
+    if (newQuery.boardId) {
+      const boardId = newQuery.boardId;
+      setActiveBoard(boards[Number(boardId) - 1].name);
+      // 필요한 로직 처리
+    }
+  }
+);
 onMounted(async () => {
   const boardId = route.query.boardId || "1"; // 쿼리에서 boardId 가져오기, 없으면 기본값 1
   activeBoard.value = boardId; // 활성 게시판 설정

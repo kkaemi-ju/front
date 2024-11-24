@@ -15,7 +15,11 @@
           <router-link
             v-for="item in menuItems"
             :key="item.path"
-            :to="item.path"
+            :to="
+              item.path === '/board'
+                ? { path: item.path, query: { boardId: 1 } }
+                : { path: item.path }
+            "
             class="text-sm font-medium text-[#00712D] hover:text-[#FF9100] transition-colors"
           >
             {{ item.name }}
@@ -70,7 +74,7 @@ import JoinModal from "../modal/Join.vue";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/user";
 const userStore = useUserStore();
-const { userLogin, userLogout,getUserInfo } = userStore;
+const { userLogin, userLogout, getUserInfo } = userStore;
 const { isLoggedIn, showLoginModal, userInfo } = storeToRefs(userStore);
 
 const showJoinModal = ref(false);
@@ -136,12 +140,10 @@ const handleLogout = () => {
   //메뉴 체인지
 };
 
-
-onMounted(async() => {
+onMounted(async () => {
   let token = sessionStorage.getItem("accessToken");
   if (token) {
     await getUserInfo(token);
   }
-
 });
 </script>

@@ -121,7 +121,18 @@
 
           <!-- Place Selection -->
           <div v-if="currentStep === 2" class="p-4">
-            <h3 class="text-lg font-medium mb-4">장소 선택</h3>
+            <div class="flex items-center justify-between mb-4">
+              <!-- Left Side: Title -->
+              <h3 class="text-lg font-medium">장소 선택</h3>
+              <!-- Right Side: Button -->
+              <button
+                @click="openModal($event)"
+                class="inline-flex items-center gap-2 px-4 py-2 text-[#FF9100] border border-[#FF9100] rounded-md hover:bg-[#fff7e4] transition-colors"
+              >
+                <span class="font-medium">추천 pick</span>
+                <MousePointerClick class="w-4 h-4 text-[#FF9100]" />
+              </button>
+            </div>
             <div>
               <div class="flex justify-center mb-4">
                 <select
@@ -301,6 +312,40 @@
         ]"
       ></div>
     </div>
+    <!-- Modal -->
+    <div
+      v-if="isModalOpen"
+      :style="{
+        top: `${modalPosition.top}px`,
+        left: `${modalPosition.left}px`,
+      }"
+      class="modal"
+    >
+      <div
+        class="items-center text-center modal-content bg-gradient-to-br from-[#FFFBE6] to-[#FFFBE6] rounded-3xl shadow-lg p-8 border border-[#00712D]/20"
+      >
+        <button
+          @click="closeModal"
+          class="absolute top-2 right-2 text-gray-600 hover:text-gray-900 focus:outline-none"
+        >
+          <X />
+        </button>
+        <h2
+          class="text-2xl font-extrabold text-[#00712D] mb-2 relative inline-block"
+        >
+          TravelGo의 추천
+        </h2>
+        <p class="text-gray-600 text-lg">
+          {{ sidoMapping[searchModel.selectedLocation] }} Top 5 장소
+          <span class="inline-block animate-bounce ml-1">🔥</span>
+        </p>
+        <div
+          class="bg-white rounded-2xl p-6 shadow-inner border border-[#00712D]/10"
+        >
+          <canvas id="chart2" width="20" height="20"></canvas>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script setup>
@@ -314,6 +359,8 @@ import {
   TrashIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  MousePointerClick,
+  X,
 } from "lucide-vue-next";
 import Chart from "chart.js/auto";
 import { useRouter, useRoute } from "vue-router";
@@ -329,9 +376,13 @@ const route = useRoute();
 const sidebarOpen = ref(true);
 const currentStep = ref(1);
 
+const isModalOpen = ref(false);
+const modalPosition = ref({ top: 0, left: 0 });
+const chartCanvas = ref(null);
 let chartInstance = null;
+let chartInstance2 = null;
 //api 요청을 위한 data
-
+const bacgroundColor = ["#FAD6A5", "#FF7A7A", "#82E3C9", "#B7CBE8", "#CAA3EB"];
 const days = Array.from(
   { length: Number(route.query.day) },
   (_, i) => `${i + 1}일차`
@@ -413,6 +464,7 @@ const tripPlan = ref({
   sidoCode: searchModel.value.selectedLocation,
 });
 const topSidoData = ref({});
+const topSidoAttData = ref({});
 // 검색 결과 저장
 const tripList = ref([]);
 const updatedTripList = ref([]);
@@ -770,6 +822,55 @@ const renderChart = async () => {
     },
   });
 };
+const renderChart2 = async () => {
+  console.log("dfsd");
+  await nextTick(); // DOM 렌더링 후 실행
+  const canvas = document.getElementById("chart2");
+  console.log(canvas);
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  // 기존 차트 제거
+  if (chartInstance2) {
+    chartInstance2.destroy();
+    chartInstance2 = null;
+  }
+
+  // 새 차트 생성
+  chartInstance2 = new Chart(ctx, {
+    type: "pie",
+    data: topSidoAttData.value,
+    options: {
+      responsive: true,
+      maintainAspectRatio: true, // 비율 유지
+      aspectRatio: 2, // 너비와 높이 비율 (2:1)
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom",
+        },
+      },
+    },
+  });
+};
+const closeModal = () => {
+  isModalOpen.value = false;
+  if (chartInstance2) {
+    chartInstance2.destroy();
+    chartInstance2 = null;
+  }
+};
+const openModal = (event) => {
+  const { clientX, clientY } = event;
+  isModalOpen.value = true;
+
+  // 모달 위치 설정
+  modalPosition.value = {
+    top: clientY + 10, // 클릭 위치 바로 아래
+    left: clientX + 10, // 클릭 위치 바로 오른쪽
+  };
+  renderChart2();
+};
 const removeItem = (no) => {
   if (items.value[selectedDay.value]) {
     items.value[selectedDay.value] = items.value[selectedDay.value].filter(
@@ -806,7 +907,7 @@ const fetchTopSidoCodes = async () => {
   try {
     const response = await axios.get("http://localhost/tripplan/top-sido");
     console.log(response.data);
-    const bacgroundColor = ["#FAD6A5", "#FF7A7A", "#82E3C9"];
+
     topSidoData.value = {
       labels: [],
       datasets: [
@@ -823,12 +924,39 @@ const fetchTopSidoCodes = async () => {
       topSidoData.value.datasets[0].data.push(topSido.visit_count);
       topSidoData.value.datasets[0].backgroundColor.push(bacgroundColor[idx++]);
     }
-
-    console.log(topSidoData.value);
   } catch (error) {
     console.error("Error fetching top sido codes:", error);
   }
 };
+const fetchTopSidoCodesAtt = async () => {
+  try {
+    const response = await axios.get(
+      `http://localhost/tripplan/top-att/${searchModel.value.selectedLocation}`
+    );
+
+    console.log(response.data);
+
+    topSidoAttData.value = {
+      labels: [],
+      datasets: [
+        {
+          data: [],
+          backgroundColor: [],
+          borderWidth: 1,
+        },
+      ],
+    };
+    let idx = 0;
+    for (let topSido of response.data) {
+      topSidoAttData.value.labels.push(topSido.title);
+      topSidoAttData.value.datasets[0].data.push(topSido.visit_count);
+      topSidoAttData.value.datasets[0].backgroundColor.push(
+        bacgroundColor[idx++]
+      );
+    }
+  } catch (error) {}
+};
+
 // Watchers
 watch([currentStep, sidebarOpen], async ([step, open]) => {
   if (step === 1 && open) {
@@ -873,6 +1001,7 @@ watch(
       items.value = Array.from({ length }, () => []);
 
       await handleSearch();
+      await fetchTopSidoCodesAtt();
     }
   },
   { deep: true } // 객체 변경을 감지하기 위해 깊은 감시 설정
@@ -895,7 +1024,7 @@ onMounted(async () => {
   syncSelectedState();
 
   await fetchTopSidoCodes();
-
+  await fetchTopSidoCodesAtt();
   if (currentStep.value === 1 && sidebarOpen.value) {
     renderChartWithDelay();
   }
@@ -919,10 +1048,9 @@ onUnmounted(() => {
   align-items: center;
 }
 canvas {
-  width: 100% !important;
-  height: auto !important;
+  width: 100% !important; /* 부모 요소의 너비를 기준으로 캔버스 크기 지정 */
+  height: auto !important; /* 고정된 높이 설정 */
 }
-
 .list-enter-active,
 .list-leave-active {
   transition: all 0.3s ease;
@@ -936,5 +1064,19 @@ canvas {
 
 .list-move {
   transition: transform 0.3s ease;
+}
+
+.modal {
+  position: absolute;
+  border-radius: 8px;
+  z-index: 1000; /* 모달이 다른 요소 위에 뜨도록 설정 */
+  transform: translate(0, 0); /* 클릭 위치 기준 이동 */
+}
+.modal-content {
+  position: relative;
+  max-width: 400px;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 </style>
