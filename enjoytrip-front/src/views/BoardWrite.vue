@@ -345,7 +345,19 @@ const addMarker = (position, index) => {
   });
 
   kakao.maps.event.addListener(marker, "mouseover", () => {
-    const content = `<div style="padding:5px; color: black;">${places.value[index].place_name}</div>`;
+    const content = `
+  <div style="
+    padding:5px;
+    color: black;
+    width:200px;
+    text-align:center;
+    word-wrap:break-word;
+    white-space:normal;
+    overflow:hidden;
+    font-size:14px;">
+    ${places.value[index].place_name}
+  </div>
+`;
     infowindow.value.setContent(content);
     infowindow.value.open(map.value, marker);
   });
@@ -366,7 +378,19 @@ const highlightPlace = (index) => {
   map.value.setLevel(2);
   map.value.setCenter(position);
   infowindow.value.setContent(
-    `<div style="padding:10px;">${place.place_name}</div>`
+    `
+  <div style="
+    padding:10px;
+    color:black;
+    width:200px;
+    text-align:center;
+    word-wrap:break-word;
+    white-space:normal;
+    overflow:hidden;
+    font-size:15px;">
+    ${place.place_name}
+  </div>
+`
   );
   infowindow.value.open(map.value, markers.value[index]);
 };
@@ -502,12 +526,18 @@ const submitModify = async () => {
 
   boardId.value = route.query.boardId;
 
+  const selectedPlaceData = places.value[selectedPlace.value] || {};
+  const attractionUrl = selectedPlaceData.address_name || "";
+  const attractionName = selectedPlaceData.place_name || "";
+
   // 게시글 내용 설정
   const postData = {
     userId: userInfo.userId,
     title: title.value,
     content: content.value,
     boardId: boardId.value,
+    attractionName: attractionName,
+    attractionUrl: attractionUrl,
   };
 
   const response = await axios.put(
@@ -518,7 +548,14 @@ const submitModify = async () => {
   fileUpload(route.query.boardId);
   if (response.status === 200) {
     alert("수정되었습니다!");
-    router.push({ name: "boarddetail", params: { id: boardId.value } });
+    if (boardType.value === "2") {
+      router.push({
+        name: "boardlist",
+        query: { boardId: boardType.value },
+      });
+    } else {
+      router.push({ name: "boarddetail", params: { id: boardId.value } });
+    }
   } else {
     console.error("수정 실패");
   }
@@ -566,13 +603,16 @@ const modifyArticle = async () => {
         if (status === kakao.maps.services.Status.OK) {
           const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
 
-          // 지도 초기화
-          const container = mapContainer.value; // ref로 참조된 mapContainer
-          const options = {
-            center: coords,
-            level: 3,
-          };
-          const map = new kakao.maps.Map(container, options);
+          // 지도 재활용할거임ㅠㅜㅠㅜㅠㅜㅠㅜ
+          if (map.value) {
+            map.value.setCenter(coords);
+          } else {
+            const options = {
+              center: coords,
+              level: 3,
+            };
+            map.value = new kakao.maps.Map(mapContainer.value, options);
+          }
 
           const imageSize = new kakao.maps.Size(24, 35);
           const markerImage = new kakao.maps.MarkerImage(
@@ -581,21 +621,33 @@ const modifyArticle = async () => {
           );
           // 마커 추가
           const marker = new kakao.maps.Marker({
-            map: map,
+            map: map.value,
             position: coords,
             image: markerImage,
           });
 
           // 인포윈도우 추가
-          const infowindow = new kakao.maps.InfoWindow({
-            content: `<div style="width:150px;text-align:center;padding:6px 0;">${
-              article.value.attractionName || "장소 이름 없음"
-            }</div>`,
-          });
-          infowindow.open(map, marker);
+          infowindow.value.setContent(
+            `<div style="
+    width:250px;
+    text-align:center;
+    padding:10px 0;
+    font-size:15px;
+    word-wrap:break-word;
+    white-space:normal;
+    overflow:hidden;">
+    ${article.value.attractionName || "장소 이름 없음"}
+  </div>`
+          );
+          infowindow.value.open(map.value, marker);
+          // 검색 결과에 따라 선택된 장소 추가
+          selectedPlace.value = places.value.findIndex(
+            (place) => place.place_name === article.value.attractionName
+          );
 
-          // 지도 중심 이동
-          map.setCenter(coords);
+          if (selectedPlace.value !== -1) {
+            highlightPlace(selectedPlace.value);
+          }
         } else {
           console.error("주소를 좌표로 변환하지 못했습니다:", status);
         }
