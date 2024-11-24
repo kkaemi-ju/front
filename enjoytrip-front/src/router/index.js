@@ -75,6 +75,11 @@ const router = createRouter({
       name: "planmake",
       component: () => import("../views/PlanMake.vue"),
     },
+    {
+      path: "/planupdate",
+      name: "planupdate",
+      component: () => import("../views/PlanUpdate.vue"),
+    },
     { path: "/attractions", name: "attractions", component: Attractions },
     { path: "/tripclip", name: "tripclip", component: TripClip },
   ],

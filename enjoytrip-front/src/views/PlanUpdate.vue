@@ -92,15 +92,6 @@
                 {{ item.sido_name }}
               </option>
             </select>
-
-            <div>
-              <!-- Chart Section -->
-              <div class="flex flex-col items-center mt-10 canvas-container">
-                <h2 class="text-xl font-bold mb-2">TravelGo의 추천</h2>
-                <p class="text-gray-500 mb-4">가장 핫한 지역 Top 3</p>
-                <canvas id="chart"></canvas>
-              </div>
-            </div>
           </div>
 
           <!-- Place Selection -->
@@ -309,17 +300,14 @@ const { userInfo } = storeToRefs(userStore);
 
 const router = useRouter();
 const route = useRoute();
-
+const tripPlanId = ref(null);
 const sidebarOpen = ref(true);
 const currentStep = ref(1);
 
 let chartInstance = null;
 //api 요청을 위한 data
 
-const days = Array.from(
-  { length: Number(route.query.day) },
-  (_, i) => `${i + 1}일차`
-);
+const days = ref([]);
 const selectedDay = ref(0); // 숫자 인덱스 (0, 1, 2)
 const searchQuery = ref("");
 const recommendationTypes = [
@@ -360,6 +348,8 @@ const sidoMapping = originalLocations.reduce(
   },
   {}
 );
+const initCheck = ref(false);
+const calDay = ref("");
 // 지역별 중심좌표
 const locationCoordinates = {
   서울: { lat: 37.5665, lng: 126.978 },
@@ -390,8 +380,8 @@ const searchModel = ref({
 });
 const tripPlan = ref({
   tripName: "",
-  startDate: new Date(route.query.startdate).toISOString().split("T")[0],
-  endDate: new Date(route.query.enddate).toISOString().split("T")[0],
+  startDate: "",
+  endDate: "",
   userId: userInfo.value.userId,
   days: [],
   sidoCode: searchModel.value.selectedLocation,
@@ -596,6 +586,9 @@ const syncSelectedState = () => {
   updatedTripList.value.forEach((item) => {
     item.selected = false; // selected를 false로 설정
   });
+  console.log("items.value");
+  console.log(items.value);
+  console.log(selectedDay.value);
   for (let selectDayItem of items.value[selectedDay.value]) {
     for (let trip of updatedTripList.value) {
       if (selectDayItem.no === trip.no) {
@@ -620,8 +613,6 @@ const toggleSelected = (item, index) => {
   createMarkersAndPolyline();
 };
 
-const selectedTag = ref(); // 현재 선택된 태그 저장
-
 const scrollContainer = ref(null);
 
 const scrollLeft = () => {
@@ -636,7 +627,7 @@ const scrollRight = () => {
   }
 };
 // 태그 클릭 함수
-const toggleTag = (tag) => {
+const toggleTag = async (tag) => {
   if (
     searchModel.value.selectedRecommendationType.content_type_id ===
     tag.content_type_id
@@ -648,18 +639,15 @@ const toggleTag = (tag) => {
   } else {
     searchModel.value.selectedRecommendationType = tag;
   }
-  handleSearch();
+  await handleSearch();
 };
-const filteredPlaces = computed(() => {
-  return places.value.filter((place) => place.name.includes(searchQuery.value));
-});
+
 const formatter = new Intl.DateTimeFormat("ko-KR", {
   year: "numeric",
   month: "long",
   day: "2-digit",
 });
-const formatDateRange = `${formatter.format(new Date(route.query.startdate))} ~
-${formatter.format(new Date(route.query.enddate))}`;
+const formatDateRange = ref("");
 
 const toggleSidebar = async () => {
   sidebarOpen.value = !sidebarOpen.value;
@@ -676,11 +664,12 @@ const saveTravel = async () => {
     alert("여행 제목을 입력해주세요.");
     return;
   }
-  const currentDate = new Date(route.query.startdate);
-  const eDate = new Date(route.query.enddate);
+  const currentDate = new Date(tripPlan.value.startDate);
+  const eDate = new Date(tripPlan.value.endDate);
+
+  tripPlan.value.sidoCode = searchModel.value.selectedLocation;
   let idx = 0;
   tripPlan.value.days = [];
-  tripPlan.value.sidoCode = searchModel.value.selectedLocation;
   while (currentDate <= eDate) {
     // YYYY-MM-DD 형식으로 문자열 변환
     const formattedDate = currentDate.toISOString().split("T")[0];
@@ -704,64 +693,22 @@ const saveTravel = async () => {
   }
   console.log(tripPlan.value);
   try {
-    const response = await axios.post(
-      `http://localhost/tripplan`,
+    await axios.put(
+      `http://localhost/tripplan/${tripPlanId.value}`,
       tripPlan.value
     );
-    console.log("Trip data successfully sent:", response.data);
-    alert("여행 계획을 추가했습니다.");
-    router.push({ name: "planlist" });
+    router.push({
+      name: "plandetail",
+      query: {
+        tripPlanId: tripPlanId.value, // 쿼리 매개변수로 tripPlanId 전달
+      },
+    }); // Redirect to trip plan list
   } catch (error) {
-    console.error("Error sending trip data:", error);
+    console.error("Error updating trip plan:", error);
   }
   console.log("SaveTravel");
 };
 
-// 안전하게 차트를 렌더링하는 함수
-const renderChartWithDelay = () => {
-  setTimeout(async () => {
-    await renderChart();
-  }, 100); // 100ms 지연 (렌더링 안정화)
-};
-
-const renderChart = async () => {
-  await nextTick(); // DOM 렌더링 후 실행
-  const canvas = document.getElementById("chart");
-  if (!canvas) return;
-
-  const ctx = canvas.getContext("2d");
-
-  // 기존 차트 제거
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
-
-  // 새 차트 생성
-  chartInstance = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: ["Fruits and Veggies", "Good Carbs", "Protein"],
-      datasets: [
-        {
-          data: [40, 25, 25],
-          backgroundColor: ["#FAD6A5", "#FF7A7A", "#82E3C9"],
-          borderWidth: 1,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false, // 부모 요소의 비율을 유지하지 않음
-      plugins: {
-        legend: {
-          display: true,
-          position: "bottom",
-        },
-      },
-    },
-  });
-};
 const removeItem = (no) => {
   if (items.value[selectedDay.value]) {
     items.value[selectedDay.value] = items.value[selectedDay.value].filter(
@@ -794,18 +741,62 @@ const moveItem = (index, direction) => {
   items.value[selectedDay.value] = [...currentItems];
   createMarkersAndPolyline();
 };
+const calculateDays = (startDate, endDate) => {
+  if (!startDate || !endDate) return 0; // 날짜가 없으면 0 반환
 
-// Watchers
-watch([currentStep, sidebarOpen], async ([step, open]) => {
-  if (step === 1 && open) {
-    await renderChart();
-  } else {
-    if (chartInstance) {
-      chartInstance.destroy();
-      chartInstance = null;
-    }
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  // 날짜 차이 계산 (포함 범위로 계산하기 위해 +1 추가)
+  const days = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+  // 유효성 검사: 종료 날짜가 시작 날짜보다 빠를 경우 0 반환
+  return days > 0 ? days : 0;
+};
+const fetchPlanDetails = async (tripPlanId) => {
+  try {
+    const response = await axios.get(
+      `http://localhost/tripplan/details/${tripPlanId}`
+    );
+
+    const data = response.data;
+
+    // 제목, 날짜 설정
+    tripPlan.value.tripName = data.tripName;
+    tripPlan.value.startDate = data.startDate;
+    tripPlan.value.endDate = data.endDate;
+    tripPlan.value.sidoCode = data.sidoCode;
+    searchModel.value.selectedLocation = data.sidoCode;
+
+    formatDateRange.value = `${formatter.format(new Date(data.startDate))} ~
+${formatter.format(new Date(data.endDate))}`;
+
+    calDay.value = calculateDays(
+      new Date(data.startDate),
+      new Date(data.endDate)
+    );
+    const ccalDay = calDay.value;
+    days.value = Array.from({ length: ccalDay }, (_, i) => `${i + 1}일차`);
+    items.value = Array.from({ length: ccalDay }, () => []);
+    console.log("items!!!!");
+    console.log(items.value);
+    // 데이터 분배
+    data.attractions.forEach((attraction) => {
+      const dayIndex = attraction.dayNumber - 1; // dayNumber 기준으로 일차 구분 (0-based)
+      if (items.value[dayIndex]) {
+        items.value[dayIndex].push(attraction); // 해당 일차 배열에 데이터 추가
+      }
+    });
+    console.log(items.value);
+    // 일차별로 visitOrder 기준 정렬
+    items.value.forEach((dayItems) => {
+      dayItems.sort((a, b) => a.visitOrder - b.visitOrder);
+    });
+  } catch (error) {
+    console.error("Error fetching trip details:", error);
   }
-});
+};
+
 // Sidebar 상태를 감시하여 지도 크기 재조정
 watch(sidebarOpen, (newValue) => {
   nextTick(() => {
@@ -816,8 +807,8 @@ watch(sidebarOpen, (newValue) => {
     }
   });
 });
-watch(currentStep, (newValue) => {
-  nextTick(() => {
+watch(currentStep, async (newValue) => {
+  await nextTick(() => {
     if (map.value) {
       map.value.relayout(); // 지도 컨테이너 크기 재계산
       const center = map.value.getCenter(); // 현재 중심 좌표 가져오기
@@ -827,6 +818,7 @@ watch(currentStep, (newValue) => {
 });
 // 일차 변경 시 itemss와 itemssSelectedState 동기화
 watch(selectedDay, () => {
+  console.log(items.value);
   syncSelectedState();
 
   createMarkersAndPolyline();
@@ -834,18 +826,27 @@ watch(selectedDay, () => {
 
 watch(
   () => searchModel.value.selectedLocation,
-  (newValue, oldValue) => {
+  async (newValue, oldValue) => {
+    // 콜백 함수를 async로 설정
     if (newValue && newValue !== oldValue) {
-      items.value = Array.from({ length }, () => []);
+      if (initCheck.value) {
+        const ccalDay = calDay.value;
+        items.value = Array.from({ length: ccalDay }, () => []); // 올바른 초기화
 
-      handleSearch();
+        // 비동기 함수 호출
+        await handleSearch();
+      }
+      initCheck.value = true;
     }
   },
   { deep: true } // 객체 변경을 감지하기 위해 깊은 감시 설정
 );
-
 // Lifecycle hooks
-onMounted(() => {
+onMounted(async () => {
+  //여기서 데이터 가져오기 !!!
+  tripPlanId.value = route.query.tripPlanId;
+  await fetchPlanDetails(tripPlanId.value);
+
   if (window.kakao && window.kakao.maps) {
     initMap();
   } else {
@@ -857,11 +858,9 @@ onMounted(() => {
 
     document.head.appendChild(script);
   }
-  handleSearch();
+
+  await handleSearch();
   syncSelectedState();
-  if (currentStep.value === 1 && sidebarOpen.value) {
-    renderChartWithDelay();
-  }
 });
 
 onUnmounted(() => {

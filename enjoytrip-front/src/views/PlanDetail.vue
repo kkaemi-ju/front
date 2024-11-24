@@ -8,9 +8,6 @@
         <div class="flex items-center space-x-4">
           <h2 class="text-black">{{ travelTitle }}</h2>
           <h2 class="text-black">{{ startDate }}-{{ endDate }}</h2>
-          <h2 class="text-sm text-gray-500">
-            {{ selectedRegion || "지역" }}
-          </h2>
         </div>
       </div>
     </div>
@@ -49,9 +46,16 @@
               </div>
             </div>
             <button
+              @click="onHandleUpdate"
               class="w-full border-2 border-primary text-primary rounded-full py-3 px-6 flex items-center justify-center relative"
             >
               편집
+            </button>
+            <button
+              @click="onHandleDelete"
+              class="mt-2 w-full border-2 border-red-500 text-red-500 rounded-full py-3 px-6 flex items-center justify-center relative"
+            >
+              삭제
             </button>
           </div>
         </div>
@@ -59,7 +63,7 @@
         <!-- Content Area -->
         <div class="flex-1 bg-white">
           <div class="h-screen flex flex-col p-4 bg-gray-100">
-            <h1 class="text-2xl font-bold mb-4">지역이 나오자</h1>
+            <h1 class="text-2xl font-bold mb-4">{{ locationName }}</h1>
             <div class="flex-1 overflow-y-auto">
               <TransitionGroup name="list" tag="div">
                 <div
@@ -139,7 +143,7 @@ const startDate = ref("");
 const endDate = ref("");
 const selectedRegion = ref("");
 const sidebarOpen = ref(true);
-
+const locationName = ref("");
 const travelTitle = ref("여행계획");
 let chartInstance = null;
 
@@ -221,6 +225,9 @@ const fetchPlanDetails = async (tripPlanId) => {
     travelTitle.value = data.tripName;
     startDate.value = data.startDate;
     endDate.value = data.endDate;
+    locationName.value = originalLocations.find(
+      (location) => location.sido_code === data.sidoCode
+    )?.sido_name;
     // 일차별 데이터 초기화
     const totalDays =
       Math.ceil(
@@ -358,6 +365,43 @@ const clearMarkersAndPolyline = () => {
   // 경로 초기화
   linePath.value = [];
 };
+const calculateDays = (startDate, endDate) => {
+  if (!startDate || !endDate) return 0; // 날짜가 없으면 0 반환
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  // 날짜 차이 계산 (포함 범위로 계산하기 위해 +1 추가)
+  const days = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+  // 유효성 검사: 종료 날짜가 시작 날짜보다 빠를 경우 0 반환
+  return days > 0 ? days : 0;
+};
+const onHandleUpdate = () => {
+  router.push({
+    name: "planupdate",
+    query: {
+      tripPlanId: tripPlanId.value, // 쿼리 매개변수로 tripPlanId 전달
+    },
+  });
+};
+
+const onHandleDelete = async () => {
+  try {
+    const response = await axios.delete(
+      `http://localhost/tripplan/${tripPlanId.value}`
+    );
+
+    if (response.status == 200) {
+      alert("삭제 완료");
+      router.push({ name: "planlist" });
+    } else {
+      alert("삭제 실패");
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
 // Lifecycle hooks
 onMounted(async () => {
   tripPlanId.value = route.query.tripPlanId;
@@ -375,7 +419,8 @@ onMounted(async () => {
 
     document.head.appendChild(script);
   }
-  const newCenter = new kakao.maps.LatLng(35.8714, 128.6014);
+  const coordinates = locationCoordinates[locationName.value];
+  const newCenter = new kakao.maps.LatLng(coordinates.lat, coordinates.lng);
 
   map.value.setCenter(newCenter);
   createMarkersAndPolyline();

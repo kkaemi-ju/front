@@ -175,8 +175,8 @@ const handleUpdate = async () => {
 const handleDelete = async () => {
   console.log("Delete clicked");
   try {
-    const response = await axios.post(
-      "http://localhost/mypage/delete",
+    const response = await axios.delete(
+      "http://localhost/mypage",
       JSON.stringify(userInfo.value),
       {
         headers: {
