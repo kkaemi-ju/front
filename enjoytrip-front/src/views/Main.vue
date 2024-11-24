@@ -11,26 +11,32 @@
           <div
             v-for="(slide, index) in heroSlides"
             :key="index"
-            class="w-full h-full flex-shrink-0 bg-cover bg-center"
+            class="w-full h-full flex-shrink-0 bg-cover bg-center relative"
             :style="{ backgroundImage: `url(${slide.image})` }"
           >
+            <!-- 검은색 배경 -->
             <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+
+            <!-- 슬라이드 내용 -->
             <div
               class="container mx-auto relative h-full flex items-center justify-center text-white px-4"
             >
               <div class="text-center space-y-4">
                 <h1 class="text-4xl font-bold">{{ slide.title }}</h1>
                 <p class="text-lg text-[#D5ED9F]">{{ slide.subtitle }}</p>
+                <!-- 버튼 -->
                 <div class="flex justify-center gap-4 mt-8">
                   <button
-                    class="px-4 py-2 bg-[#FF9100] hover:bg-[#FF9100]/90 text-white rounded"
+                    class="px-4 py-2 bg-[#FF9100] hover:bg-[#FF9100]/90 hover:scale-110 text-white rounded"
+                    @click="navigateToAttractions"
                   >
                     여행지 찾기
                   </button>
                   <button
-                    class="px-4 py-2 border border-white text-white hover:bg-white/20 rounded"
+                    class="px-4 py-2 border border-white hover:scale-110 text-white hover:bg-white/20 rounded"
+                    @click="navigateToTripPlan"
                   >
-                    더 알아보기
+                    여행 계획 만들기
                   </button>
                 </div>
               </div>
@@ -81,20 +87,30 @@
       </section>
 
       <!-- Categories -->
-      <section class="py-12 bg-white">
+      <section class="py-12 bg-[#FFFBE6]">
         <div class="container mx-auto max-w-screen-lg px-4">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div
+            class="grid grid-cols-1 sm:grid-cols-4 gap-8 justify-items-center"
+          >
             <router-link
               v-for="category in categories"
               :key="category.name"
               :to="category.link"
-              class="block mb-4"
+              class="group flex flex-col items-center justify-center transition-all duration-300 hover:-translate-y-1"
             >
-              <div
-                class="bg-gray-100 h-24 md:h-32 flex items-center justify-center hover:bg-gray-200 transition-colors"
+              <!-- 아이콘 -->
+              <component
+                :is="category.icon"
+                class="w-10 h-10 mb-2 transition-all duration-300"
+                :class="[category.iconColor]"
+              />
+              <!-- 텍스트 -->
+              <span
+                class="text-base font-semibold text-center transition-all duration-300"
+                :class="[category.textColor]"
               >
-                <span class="text-xl">{{ category.name }}</span>
-              </div>
+                {{ category.name }}
+              </span>
             </router-link>
           </div>
         </div>
@@ -132,11 +148,39 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import { Menu, ChevronLeft, ChevronRight, Pause, Play } from "lucide-vue-next";
+import { useRouter } from "vue-router";
+import { MapPin, Calendar, MessageSquare, User } from "lucide-vue-next";
 
+const router = useRouter(); // 라우터 인스턴스 생성
 const categories = ref([
-  { name: "관광지", link: "/spots" },
-  { name: "계획", link: "/plan" },
-  { name: "숙소", link: "/accommodation" },
+  {
+    name: "관광지",
+    link: "/attractions",
+    icon: MapPin,
+    iconColor: "text-[#00712D] group-hover:text-[#FF9100]",
+    textColor: "text-[#00712D] group-hover:text-[#FF9100]",
+  },
+  {
+    name: "여행계획",
+    link: "/planlist",
+    icon: Calendar,
+    iconColor: "text-[#FF9100] group-hover:text-[#00712D]",
+    textColor: "text-[#FF9100] group-hover:text-[#00712D]",
+  },
+  {
+    name: "게시판",
+    link: "/board",
+    icon: MessageSquare,
+    iconColor: "text-[#00712D] group-hover:text-[#FF9100]",
+    textColor: "text-[#00712D] group-hover:text-[#FF9100]",
+  },
+  {
+    name: "마이페이지",
+    link: "/mypage",
+    icon: User,
+    iconColor: "text-[#FF9100] group-hover:text-[#00712D]",
+    textColor: "text-[#FF9100] group-hover:text-[#00712D]",
+  },
 ]);
 
 const hotSpots = ref([
@@ -148,27 +192,27 @@ const hotSpots = ref([
 
 const heroSlides = ref([
   {
-    image: "/placeholder.svg?height=500&width=1000",
+    image: "/src/assets/img/image-copy6.png",
     title: "당신의 완벽한 여행을 찾아보세요",
     subtitle: "특별한 순간, 특별한 장소에서",
   },
   {
-    image: "/placeholder.svg?height=500&width=1000",
+    image: "/src/assets/img/image-copy.png",
     title: "새로운 모험을 경험하세요",
     subtitle: "잊지 못할 추억을 만들어보세요",
   },
   {
-    image: "/placeholder.svg?height=500&width=1000",
+    image: "/src/assets/img/image-copy3.png",
     title: "당신만의 여행 스토리",
-    subtitle: "TravelGo와 함께 시작하세요",
+    subtitle: "떠나고와 함께 시작하세요",
   },
 ]);
 
 const currentSlide = ref(0);
 const isPlaying = ref(true);
 const slideInterval = ref(null);
-const timeLeft = ref(5000);
-const slideDuration = 5000; // 5 seconds
+const timeLeft = ref(3000);
+const slideDuration = 3000; // 5 seconds
 
 const nextSlide = () => {
   currentSlide.value = (currentSlide.value + 1) % heroSlides.value.length;
@@ -207,6 +251,15 @@ const toggleSlideShow = () => {
   } else {
     stopSlideShow();
   }
+};
+
+// 여행지 찾기 버튼 클릭 시 이동
+const navigateToAttractions = () => {
+  router.push("/attractions"); // "/attractions" 경로로 이동
+};
+
+const navigateToTripPlan = () => {
+  router.push("/planlist");
 };
 
 // Watch for manual navigation to reset timer
