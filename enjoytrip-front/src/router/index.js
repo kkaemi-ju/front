@@ -16,7 +16,7 @@ const onlyAuthUser = async (to, from, next) => {
 
   let token = sessionStorage.getItem("accessToken");
 
-  if (userInfo.value != null && token) {
+  if (token) {
     await getUserInfo(token);
   }
   if (!isValidToken.value || userInfo.value === null) {
@@ -52,6 +52,7 @@ const router = createRouter({
     {
       path: "/boarddetail/:id",
       name: "boarddetail",
+      beforeEnter: onlyAuthUser,
       component: BoardDetail,
     },
     {
@@ -63,21 +64,25 @@ const router = createRouter({
     {
       path: "/planlist",
       name: "planlist",
+      beforeEnter: onlyAuthUser,
       component: () => import("../views/PlanList.vue"),
     },
     {
       path: "/plandetail",
       name: "plandetail",
+      beforeEnter: onlyAuthUser,
       component: () => import("../views/PlanDetail.vue"),
     },
     {
       path: "/planmake",
       name: "planmake",
+      beforeEnter: onlyAuthUser,
       component: () => import("../views/PlanMake.vue"),
     },
     {
       path: "/planupdate",
       name: "planupdate",
+      beforeEnter: onlyAuthUser,
       component: () => import("../views/PlanUpdate.vue"),
     },
     { path: "/attractions", name: "attractions", component: Attractions },

@@ -1,7 +1,6 @@
 <template>
-  <div>
+  <div v-if="isReady">
     <Header />
-
     <router-view />
     <Footer />
   </div>
@@ -10,11 +9,19 @@
 <script setup>
 import Header from "./components/common/Header.vue";
 import Footer from "./components/common/Footer.vue";
-</script>
+import { onBeforeMount, ref } from "vue";
+import { useUserStore } from "@/stores/user";
 
-<style>
-/* Scoped 스타일에 추가하지 말고, 글로벌 스타일로 설정 */
-input {
-  color: black; /* 모든 input의 텍스트 색상을 검정으로 설정 */
-}
-</style>
+const userStore = useUserStore();
+const { getUserInfo } = userStore;
+
+const isReady = ref(false); // 데이터 로딩 상태
+
+onBeforeMount(async () => {
+  let token = sessionStorage.getItem("accessToken");
+  if (token) {
+    await getUserInfo(token); // 사용자 정보 로드
+  }
+  isReady.value = true; // 데이터 로딩 완료 후 렌더링
+});
+</script>

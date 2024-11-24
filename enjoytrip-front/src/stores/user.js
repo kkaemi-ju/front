@@ -11,12 +11,10 @@ export const useUserStore = defineStore("userStore", () => {
   const isValidToken = ref(false);
   const userInfo = ref(null);
   const setUserInfo = (newUserInfo) => {
-    console.log(newUserInfo);
     userInfo.value = newUserInfo;
   };
   const userLogin = async (loginUser) => {
     try {
-      console.log(loginUser);
       const response = await axios.post(
         "http://localhost/user/login",
         loginUser
@@ -32,7 +30,6 @@ export const useUserStore = defineStore("userStore", () => {
       showLoginModal.value = false;
       isValidToken.value = true;
     } catch (error) {
-      console.error("로그인 중 오류가 발생했습니다.", error);
       alert("아이디 또는 비밀번호를 확인해주세요.");
       isLoggedIn.value = false;
       isValidToken.value = false;
@@ -64,7 +61,6 @@ export const useUserStore = defineStore("userStore", () => {
     try {
       // JWT 토큰 디코드
       const decodedToken = jwtDecode(token);
-      console.log("디코딩된 토큰:", decodedToken);
 
       // 유저 정보 조회
       const response = await axios.get(
@@ -78,7 +74,6 @@ export const useUserStore = defineStore("userStore", () => {
 
       if (response.status === 200) {
         userInfo.value = response.data.userInfo;
-        console.log("유저 정보:", userInfo.value);
 
         isLoggedIn.value = true;
         isValidToken.value = true;
@@ -86,7 +81,6 @@ export const useUserStore = defineStore("userStore", () => {
         throw new Error("유저 정보 없음");
       }
     } catch (error) {
-      console.error("토큰 만료 또는 유효하지 않음:", error);
       isValidToken.value = false;
       await tokenRegenerate();
     }
@@ -109,13 +103,11 @@ export const useUserStore = defineStore("userStore", () => {
         const newAccessToken = response.data["access-token"];
         sessionStorage.setItem("accessToken", newAccessToken);
         isValidToken.value = true;
-        console.log("토큰 재발급 성공:", newAccessToken);
       } else {
         throw new Error("토큰 재발급 실패");
       }
     } catch (error) {
       // HttpStatus.UNAUTHORIZE(401) : RefreshToken 기간 만료 >> 다시 로그인!!!!
-      console.error("리프레시 토큰 만료:", error);
       // 다시 로그인 전 DB에 저장된 RefreshToken 제거.
       try {
         const logoutResponse = await axios.get(

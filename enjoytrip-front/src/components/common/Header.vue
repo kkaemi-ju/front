@@ -140,10 +140,5 @@ const handleLogout = () => {
   //메뉴 체인지
 };
 
-onMounted(async () => {
-  let token = sessionStorage.getItem("accessToken");
-  if (token) {
-    await getUserInfo(token);
-  }
-});
+onMounted(async () => {});
 </script>

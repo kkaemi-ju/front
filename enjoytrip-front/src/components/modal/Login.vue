@@ -30,6 +30,22 @@
             class="text-black mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FF9100] focus:ring focus:ring-[#FF9100] focus:ring-opacity-50"
           />
         </div>
+        <div class="flex items-center mb-4">
+          <!-- 귀여운 토글 스위치 -->
+          <input
+            type="checkbox"
+            id="rememberId"
+            v-model="rememberId"
+            class="hidden"
+          />
+          <label
+            for="rememberId"
+            class="toggle-switch cursor-pointer relative inline-block w-12 h-6"
+          >
+            <span class="slider"></span>
+          </label>
+          <span class="ml-2 text-sm text-gray-700">아이디 저장</span>
+        </div>
         <div class="flex items-center justify-between">
           <button
             type="submit"
@@ -55,7 +71,6 @@ import { ref, onMounted } from "vue";
 import axios from "axios";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/user";
-import router from "@/router";
 
 const userStore = useUserStore();
 const { isLoggedIn } = storeToRefs(userStore);
@@ -64,26 +79,61 @@ const loginUser = ref({
   userId: "",
   userPwd: "",
 });
-const email = ref("");
-const password = ref("");
+const rememberId = ref(false); // 아이디 저장 여부 상태
+
+// 로그인 로직
 const login = async () => {
   await userLogin(loginUser.value);
   let token = sessionStorage.getItem("accessToken");
   console.log(token);
   console.log("isLogin: " + isLoggedIn.value);
+
   if (isLoggedIn.value) {
     await getUserInfo(token);
-    //changemenu
+
+    // 아이디 저장 로직
+    if (rememberId.value) {
+      localStorage.setItem("savedUserId", loginUser.value.userId);
+    } else {
+      localStorage.removeItem("savedUserId");
+    }
   }
 };
 
-onMounted(async () => {
+// 페이지 로드 시 저장된 아이디 불러오기
+onMounted(() => {
   console.log("페이지 로드 완료");
+  const savedUserId = localStorage.getItem("savedUserId");
+  if (savedUserId) {
+    loginUser.value.userId = savedUserId; // 저장된 아이디 불러오기
+    rememberId.value = true; // 저장 상태 체크
+  }
 });
 </script>
-<style>
-/* Scoped 스타일에 추가하지 말고, 글로벌 스타일로 설정 */
-input {
-  color: black; /* 모든 input의 텍스트 색상을 검정으로 설정 */
+
+<style scoped>
+/* 토글 스위치 스타일 */
+.toggle-switch {
+  background-color: #ddd;
+  border-radius: 20px;
+  position: relative;
+  transition: background-color 0.3s ease;
+}
+.toggle-switch .slider {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+input:checked + .toggle-switch {
+  background-color: #ff9100;
+}
+input:checked + .toggle-switch .slider {
+  transform: translateX(24px);
 }
 </style>
