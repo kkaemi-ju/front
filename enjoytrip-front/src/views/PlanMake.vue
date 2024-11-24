@@ -93,12 +93,28 @@
               </option>
             </select>
 
-            <div>
+            <div
+              class="bg-gradient-to-br from-[#FFFBE6] to-[#FFFBE6] rounded-3xl shadow-lg p-8 border border-[#00712D]/20"
+              style="margin-top: 150px"
+            >
               <!-- Chart Section -->
-              <div class="flex flex-col items-center mt-10 canvas-container">
-                <h2 class="text-xl font-bold mb-2">TravelGo의 추천</h2>
-                <p class="text-gray-500 mb-4">가장 핫한 지역 Top 3</p>
-                <canvas id="chart"></canvas>
+              <div
+                class="text-center mb-8 flex flex-col items-center mt-10 canvas-container"
+              >
+                <h2
+                  class="text-2xl font-extrabold text-[#00712D] mb-2 relative inline-block"
+                >
+                  TravelGo의 추천
+                </h2>
+                <p class="text-gray-600 text-lg">
+                  가장 핫한 지역 Top 3
+                  <span class="inline-block animate-bounce ml-1">🔥</span>
+                </p>
+                <div
+                  class="bg-white rounded-2xl p-6 shadow-inner border border-[#00712D]/10"
+                >
+                  <canvas id="chart"></canvas>
+                </div>
               </div>
             </div>
           </div>
@@ -189,7 +205,7 @@
                         @click="toggleSelected(item, index)"
                         :class="
                           item.selected
-                            ? 'bg-pink-500 text-white'
+                            ? 'bg-green-500 text-white'
                             : 'bg-gray-200 text-gray-500'
                         "
                         class="p-2 rounded-full transition-colors duration-200"
@@ -396,6 +412,7 @@ const tripPlan = ref({
   days: [],
   sidoCode: searchModel.value.selectedLocation,
 });
+const topSidoData = ref({});
 // 검색 결과 저장
 const tripList = ref([]);
 const updatedTripList = ref([]);
@@ -636,7 +653,7 @@ const scrollRight = () => {
   }
 };
 // 태그 클릭 함수
-const toggleTag = (tag) => {
+const toggleTag = async (tag) => {
   if (
     searchModel.value.selectedRecommendationType.content_type_id ===
     tag.content_type_id
@@ -648,7 +665,7 @@ const toggleTag = (tag) => {
   } else {
     searchModel.value.selectedRecommendationType = tag;
   }
-  handleSearch();
+  await handleSearch();
 };
 const filteredPlaces = computed(() => {
   return places.value.filter((place) => place.name.includes(searchQuery.value));
@@ -740,16 +757,7 @@ const renderChart = async () => {
   // 새 차트 생성
   chartInstance = new Chart(ctx, {
     type: "pie",
-    data: {
-      labels: ["Fruits and Veggies", "Good Carbs", "Protein"],
-      datasets: [
-        {
-          data: [40, 25, 25],
-          backgroundColor: ["#FAD6A5", "#FF7A7A", "#82E3C9"],
-          borderWidth: 1,
-        },
-      ],
-    },
+    data: topSidoData.value,
     options: {
       responsive: true,
       maintainAspectRatio: false, // 부모 요소의 비율을 유지하지 않음
@@ -794,7 +802,33 @@ const moveItem = (index, direction) => {
   items.value[selectedDay.value] = [...currentItems];
   createMarkersAndPolyline();
 };
+const fetchTopSidoCodes = async () => {
+  try {
+    const response = await axios.get("http://localhost/tripplan/top-sido");
+    console.log(response.data);
+    const bacgroundColor = ["#FAD6A5", "#FF7A7A", "#82E3C9"];
+    topSidoData.value = {
+      labels: [],
+      datasets: [
+        {
+          data: [],
+          backgroundColor: [],
+          borderWidth: 1,
+        },
+      ],
+    };
+    let idx = 0;
+    for (let topSido of response.data) {
+      topSidoData.value.labels.push(sidoMapping[topSido.sido_code]);
+      topSidoData.value.datasets[0].data.push(topSido.visit_count);
+      topSidoData.value.datasets[0].backgroundColor.push(bacgroundColor[idx++]);
+    }
 
+    console.log(topSidoData.value);
+  } catch (error) {
+    console.error("Error fetching top sido codes:", error);
+  }
+};
 // Watchers
 watch([currentStep, sidebarOpen], async ([step, open]) => {
   if (step === 1 && open) {
@@ -834,18 +868,18 @@ watch(selectedDay, () => {
 
 watch(
   () => searchModel.value.selectedLocation,
-  (newValue, oldValue) => {
+  async (newValue, oldValue) => {
     if (newValue && newValue !== oldValue) {
       items.value = Array.from({ length }, () => []);
 
-      handleSearch();
+      await handleSearch();
     }
   },
   { deep: true } // 객체 변경을 감지하기 위해 깊은 감시 설정
 );
 
 // Lifecycle hooks
-onMounted(() => {
+onMounted(async () => {
   if (window.kakao && window.kakao.maps) {
     initMap();
   } else {
@@ -857,8 +891,11 @@ onMounted(() => {
 
     document.head.appendChild(script);
   }
-  handleSearch();
+  await handleSearch();
   syncSelectedState();
+
+  await fetchTopSidoCodes();
+
   if (currentStep.value === 1 && sidebarOpen.value) {
     renderChartWithDelay();
   }
