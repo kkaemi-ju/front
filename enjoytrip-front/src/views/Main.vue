@@ -150,6 +150,7 @@ import { ref, onMounted, onUnmounted, watch } from "vue";
 import { Menu, ChevronLeft, ChevronRight, Pause, Play } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 import { MapPin, Calendar, MessageSquare, User } from "lucide-vue-next";
+import axios from "axios";
 
 const router = useRouter(); // 라우터 인스턴스 생성
 const categories = ref([
@@ -262,6 +263,28 @@ const navigateToTripPlan = () => {
   router.push("/planlist");
 };
 
+const getTopAttractions = async () => {
+  try {
+    const response = await axios.get(`http://localhost/attraction/top`);
+    if (response.status === 200) {
+      const topAttractions = response.data.slice(0, 5); // 상위 5개
+      console.log("Top Attractions: ", JSON.stringify(topAttractions, null, 2)); // JSON으로 출력
+
+      const AttractionList = topAttractions.map(
+        (attraction) => attraction.attractions_no
+      );
+      console.log("Cnt List: ", AttractionList);
+      getImageAndName(AttractionList);
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
+const getImageAndName = async (AttractionList) => {
+  // 백에서 이름이랑 이미지 받아오기
+  console.log("toptoptoop " + AttractionList);
+};
 // Watch for manual navigation to reset timer
 watch(currentSlide, () => {
   timeLeft.value = slideDuration;
@@ -272,6 +295,7 @@ onMounted(() => {
   if (isPlaying.value) {
     startSlideShow();
   }
+  getTopAttractions();
 });
 
 onUnmounted(() => {
