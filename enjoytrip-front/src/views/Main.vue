@@ -134,7 +134,7 @@
               <div class="p-4">
                 <h3 class="font-semibold">{{ spot.title }}</h3>
                 <p class="text-sm text-gray-600 mt-2">
-                  특별한 순간을 만나보세요
+                  {{ spot.addr }}
                 </p>
               </div>
             </div>
@@ -150,6 +150,7 @@ import { ref, onMounted, onUnmounted, watch } from "vue";
 import { Menu, ChevronLeft, ChevronRight, Pause, Play } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 import { MapPin, Calendar, MessageSquare, User } from "lucide-vue-next";
+import axios from "axios";
 
 const router = useRouter(); // 라우터 인스턴스 생성
 const categories = ref([
@@ -183,12 +184,7 @@ const categories = ref([
   },
 ]);
 
-const hotSpots = ref([
-  { title: "싸피 구미캠", image: "/placeholder.svg?height=400&width=300" },
-  { title: "재경집", image: "/placeholder.svg?height=400&width=300" },
-  { title: "선주집", image: "/placeholder.svg?height=400&width=300" },
-  { title: "베른", image: "/placeholder.svg?height=400&width=300" },
-]);
+const hotSpots = ref([]);
 
 const heroSlides = ref([
   {
@@ -204,7 +200,7 @@ const heroSlides = ref([
   {
     image: "/src/assets/img/image-copy3.png",
     title: "당신만의 여행 스토리",
-    subtitle: "떠나고와 함께 시작하세요",
+    subtitle: "떠나GO와 함께 시작하세요",
   },
 ]);
 
@@ -262,6 +258,41 @@ const navigateToTripPlan = () => {
   router.push("/planlist");
 };
 
+const getTopAttractions = async () => {
+  try {
+    const response = await axios.get(`http://localhost/attraction/top`);
+    if (response.status === 200) {
+      const topAttractions = response.data.slice(0, 4); // 상위 5개
+
+      const AttractionList = topAttractions.map(
+        (attraction) => attraction.attractions_no
+      );
+      getImageAndName(AttractionList);
+    }
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
+const getImageAndName = async (AttractionList) => {
+  // 백에서 이름이랑 이미지 받아오기
+  try {
+    const response = await axios.post(
+      `http://localhost/attraction/info`,
+      AttractionList
+    );
+    if (response.status === 200) {
+      console.log("infos : " + response.data);
+      hotSpots.value = response.data.map((info) => ({
+        title: info.title,
+        image: info.firstImage1 || "/src/assets/img/no-img.png",
+        addr: info.addr1,
+      }));
+    }
+  } catch (error) {
+    console.error(error.message);
+  }
+};
 // Watch for manual navigation to reset timer
 watch(currentSlide, () => {
   timeLeft.value = slideDuration;
@@ -272,6 +303,7 @@ onMounted(() => {
   if (isPlaying.value) {
     startSlideShow();
   }
+  getTopAttractions();
 });
 
 onUnmounted(() => {
