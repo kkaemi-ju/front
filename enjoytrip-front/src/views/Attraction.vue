@@ -57,6 +57,27 @@
         <span class="text-[#00712D] font-bold text-lg">추천해드려요</span>
       </div>
 
+      <!-- AI 추천 모달 -->
+      <div
+        v-if="isModalOpen"
+        class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+      >
+        <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+          <h3 class="text-lg font-bold mb-4">AI 추천 결과</h3>
+          <ul class="list-disc pl-5 space-y-2">
+            <li v-for="(recommendation, index) in recommendations" :key="index">
+              {{ recommendation }}
+            </li>
+          </ul>
+          <button
+            @click="closeModal"
+            class="mt-4 px-4 py-2 ml-80 bg-[#FF9100] text-white rounded-full hover:bg-red-600 transition duration-300"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+
       <!-- Search Input -->
       <div class="search-box">
         <input
@@ -70,26 +91,25 @@
     </div>
 
     <!-- Map Section -->
-    <div class="mb-8">
+    <div class="mb-8 mt-4">
       <div class="flex justify-between items-center mb-4">
         <!-- Title -->
-        <h2 class="text-xl font-medium text-black">지도</h2>
-        <!-- Favorites Toggle Button -->
+        <h2 class="text-xl font-medium text-black mr-auto">지도</h2>
         <button
-          @click="toggleFavorites"
-          class="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors duration-200"
+          v-if="isAIReady"
+          @click="openModal"
+          class="mr-4 px-4 py-2 bg-white text-[#FF9100] font-bold rounded-full border-2 border-[#FF9100] hover:bg-[#FF9100] hover:text-white transition-all duration-500 animate-fade-in"
         >
-          <Heart
-            :class="{ 'fill-[#FF9100] stroke-[#FF9100]': showFavorites }"
-            class="w-5 h-5"
-          />
-          <span
-            class="text-sm font-medium"
-            :class="{ 'text-[#FF9100]': showFavorites }"
-          >
-            찜목록 보기
-          </span>
+          AI 추천
         </button>
+        <div class="flex justify-center items-center">
+          <button
+            @click="openWishlistModal"
+            class="px-4 py-2 bg-white text-[#FF9100] font-bold rounded-full border-2 border-[#FF9100] hover:bg-[#FF9100] hover:text-white transition duration-300"
+          >
+            찜 목록 보기
+          </button>
+        </div>
       </div>
       <div
         ref="mapContainer"
@@ -190,8 +210,14 @@ import axios from "axios";
 import { storeToRefs } from "pinia";
 import { Heart } from "lucide-vue-next";
 import { useUserStore } from "@/stores/user";
+
 const userStore = useUserStore();
 const { userInfo } = storeToRefs(userStore);
+
+// 추천 받은 지역 저장
+const recommendations = ref([]);
+const isModalOpen = ref(false);
+const isAIReady = ref(false); // AI 결과를 받아온 후 버튼 보이도록 함
 const originalLocations = [
   { sido_code: 1, sido_name: "서울", image: "/src/assets/img/Seoul.png" },
   { sido_code: 2, sido_name: "인천", image: "/src/assets/img/Incheon.png" },
@@ -441,7 +467,8 @@ const throttledScrollHandler = (() => {
   };
 })();
 
-const selectLocation = (index, location) => {
+const selectLocation = async (index, location) => {
+  isAIReady.value = false; // AI 추천 결과 안나오도록 함
   centerIndex.value = index;
   searchModel.value.selectedLocation = location.sido_code;
 
@@ -450,6 +477,37 @@ const selectLocation = (index, location) => {
 
   // 지도 검색
   handleSearch();
+
+  // AI 추천받아서 recommendations에 저장
+  recommendations.value = await getAIRecommendations(location.sido_name);
+  isAIReady.value = true; // AI 추천 결과 나오도록 함
+  console.log("추천 결과 " + recommendations.value);
+};
+
+// 모달 열기
+const openModal = () => {
+  if (!recommendations.value || recommendations.value.length === 0) {
+    alert("AI 추천 결과가 없습니다. 먼저 추천을 받아보세요!");
+    return;
+  }
+  // 데이터 parse
+  recommendations.value = parseRecommendations(recommendations.value);
+
+  isModalOpen.value = true;
+};
+
+const parseRecommendations = (recommendations) => {
+  // 번호, 맛집 소개로 시작하는 데이터 기준으로 분리!!
+
+  return recommendations
+    .join(" ")
+    .split(/(?=\d\.\s|맛집\s소개)/)
+    .map((item) => item.trim());
+};
+
+// 모달 닫기
+const closeModal = () => {
+  isModalOpen.value = false;
 };
 
 const scrollToCenter = (index) => {
@@ -706,6 +764,23 @@ const userCheck = () => {
   }
   return true;
 };
+
+// getAIRecommendations 함수 수정
+const getAIRecommendations = async (clickedRegion) => {
+  try {
+    console.log(clickedRegion);
+    const response = await axios.post(
+      `http://localhost/attraction/ai-recommendations`,
+      {
+        region: clickedRegion,
+      }
+    );
+    return response.data.recommendations;
+  } catch (error) {
+    console.error("AI 추천 요청 중 오류 발생:", error);
+    return [];
+  }
+};
 watch(
   () => searchModel.value.selectedRecommendationType,
   (newValue, oldValue) => {
@@ -843,5 +918,20 @@ tbody::-webkit-scrollbar-thumb {
 
 tbody::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
 }
 </style>
