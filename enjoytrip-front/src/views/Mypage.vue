@@ -41,7 +41,7 @@
       <button
         type="button"
         @click="verifyPassword"
-        class="text-white bg-[#00712D] hover:bg-[#FF9100] px-6 py-2 rounded-full text-sm transition-colors duration-200"
+        class="text-white bg-[#FF9100] hover:bg-[#FF9100]/80 px-6 py-2 rounded-full text-sm transition-colors duration-200"
       >
         패스워드 변경
       </button>
@@ -62,18 +62,13 @@
         <button
           type="button"
           @click="handleDelete"
-          class="px-6 py-2 text-gray-700 rounded-lg border border-gray-500 hover:bg-gray-100 transition-colors duration-200"
+          class="px-6 py-2 text-white bg-red-500 hover:bg-red-400 rounded-lg transition-colors duration-200"
         >
           삭제
         </button>
         <button
-          class="px-6 py-2 text-white rounded-lg transition-colors duration-200"
-          :style="{
-            backgroundColor: '#00712D',
-            ':hover': {
-              backgroundColor: '#FF9100',
-            },
-          }"
+          type="submit"
+          class="px-6 py-2 text-white bg-[#FF9100] hover:bg-[#FF9100]/80 rounded-lg transition-colors duration-200"
           @click="handleUpdate"
         >
           수정
@@ -114,7 +109,7 @@
           <button
             @click="changePassword"
             :disabled="passwordError"
-            class="px-4 py-2 bg-[#00712D] text-white rounded hover:bg-[#FF9100] disabled:opacity-50"
+            class="px-4 py-2 bg-[#FF9100] text-white rounded hover:bg-[#FF9100]/80 disabled:opacity-50"
           >
             변경
           </button>
@@ -173,11 +168,17 @@ const handleUpdate = async () => {
   }
 };
 const handleDelete = async () => {
-  console.log("Delete clicked");
+  // 삭제 확인 다이얼로그
+  const isConfirmed = confirm("계정을 삭제하시겠습니까?");
+
+  if (!isConfirmed) {
+    return; // 사용자가 취소를 선택한 경우
+  }
+
   try {
+    console.log(userInfo.value);
     const response = await axios.delete(
-      "http://localhost/mypage",
-      JSON.stringify(userInfo.value),
+      `http://localhost/mypage/${userInfo.value.userId}`,
       {
         headers: {
           "Content-Type": "application/json;charset=utf-8",
@@ -189,7 +190,8 @@ const handleDelete = async () => {
     if (response.status === 200) {
       try {
         await userLogout();
-        console.log("로그인 성공적으로");
+        alert("계정이 성공적으로 삭제되었습니다.");
+        console.log("로그아웃 성공적으로");
       } catch (error) {
         console.error("로그아웃 실패");
       }

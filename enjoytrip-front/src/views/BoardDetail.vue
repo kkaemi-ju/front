@@ -117,16 +117,52 @@
                 <span class="text-sm text-gray-800">{{
                   comment.createdAt
                 }}</span>
-                <button
-                  @click="deleteComment(comment.commentId)"
-                  class="text-[#00712D] text-sm hover:underline hover:text-[#FF9100] mt-1"
+                <div
+                  class="flex gap-2"
                   v-if="comment.userId === userInfo.userId"
                 >
-                  X
+                  <button
+                    @click="startEditComment(comment)"
+                    class="text-[#00712D] text-sm hover:underline hover:text-[#FF9100] mt-1"
+                  >
+                    <Pencil class="w-4 h-4" />
+                  </button>
+                  <button
+                    @click="deleteComment(comment.commentId)"
+                    class="text-[#00712D] text-sm hover:underline hover:text-[#FF9100] mt-1"
+                  >
+                    X
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- 수정 모드일 때 -->
+            <div
+              v-if="editingCommentId === comment.commentId"
+              class="flex gap-2"
+            >
+              <textarea
+                v-model="editingCommentText"
+                rows="3"
+                class="flex-grow p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#00712D] text-black"
+              ></textarea>
+              <div class="flex flex-col gap-2">
+                <button
+                  @click="saveEditComment(comment.commentId)"
+                  class="px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors"
+                >
+                  저장
+                </button>
+                <button
+                  @click="cancelEdit"
+                  class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  취소
                 </button>
               </div>
             </div>
-            <p class="text-black">{{ comment.content }}</p>
+            <!-- 일반 모드일 때 -->
+            <p v-else class="text-black">{{ comment.content }}</p>
           </li>
         </ul>
         <!-- 댓글 입력 -->
@@ -154,7 +190,7 @@
 
 <script setup>
 import { onMounted, ref, nextTick, watch } from "vue";
-import { ChevronLeft, MessageSquare, ThumbsUp } from "lucide-vue-next";
+import { ChevronLeft, MessageSquare, ThumbsUp, Pencil } from "lucide-vue-next";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import axios from "axios";
@@ -395,7 +431,54 @@ const deleteComment = async (commentId) => {
   }
 };
 
-onMounted(() => {
+// 댓글 수정 관련 상태
+const editingCommentId = ref(null);
+const editingCommentText = ref("");
+
+// 수정 모드 시작
+const startEditComment = (comment) => {
+  editingCommentId.value = comment.commentId;
+  editingCommentText.value = comment.content;
+};
+
+// 수정 취소
+const cancelEdit = () => {
+  editingCommentId.value = null;
+  editingCommentText.value = "";
+};
+
+// 수정된 댓글 저장
+const saveEditComment = async (commentId) => {
+  if (!editingCommentText.value.trim()) {
+    alert("댓글 내용을 입력해주세요.");
+    return;
+  }
+
+  try {
+    const postData = {
+      content: editingCommentText.value.trim(),
+      userId: userInfo.userId,
+      boardId: boardId.value,
+      commentId: commentId,
+    };
+    const response = await axios.put(
+      "http://localhost/board/comment",
+      postData
+    );
+
+    if (response.status === 200) {
+      cancelEdit(); // 수정 모드 종료
+      await getComments(); // 댓글 목록 새로고침
+    } else {
+      alert("댓글 수정에 실패했습니다.");
+    }
+  } catch (error) {
+    console.error("댓글 수정 중 오류 발생", error);
+    alert("댓글 수정 중 오류가 발생했습니다.");
+  }
+};
+
+onMounted(async () => {
   boardId.value = route.params.id;
   console.log("boardId " + boardId.value);
   boardType.value = route.query.boardType;
@@ -429,7 +512,8 @@ onMounted(() => {
       });
     }
   } else {
-    getArticle();
+    await getArticle();
+    await getComments();
   }
 });
 watch(boardType, async (newType) => {

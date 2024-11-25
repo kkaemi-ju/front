@@ -383,19 +383,27 @@ const onHandleUpdate = () => {
 };
 
 const onHandleDelete = async () => {
+  // 삭제 확인 다이얼로그
+  const isConfirmed = confirm("여행 계획을 삭제하시겠습니까?");
+
+  if (!isConfirmed) {
+    return; // 사용자가 취소를 선택한 경우
+  }
+
   try {
     const response = await axios.delete(
       `http://localhost/tripplan/${tripPlanId.value}`
     );
 
     if (response.status == 200) {
-      alert("삭제 완료");
+      alert("여행 계획이 성공적으로 삭제되었습니다.");
       router.push({ name: "planlist" });
     } else {
-      alert("삭제 실패");
+      alert("삭제 실패: 알 수 없는 오류가 발생했습니다.");
     }
   } catch (error) {
-    console.log(error);
+    console.error("삭제 중 오류 발생:", error);
+    alert("삭제 중 문제가 발생했습니다. 다시 시도해 주세요.");
   }
 };
 // Lifecycle hooks

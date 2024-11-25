@@ -19,18 +19,51 @@ export const useUserStore = defineStore("userStore", () => {
         "http://localhost/user/login",
         loginUser
       );
-      // posts.value = response.data.posts // 서버에서 가져온 데이터를 posts에 저장
-      let { data } = response;
-      let accessToken = data["access-token"];
-      let refreshToken = data["refresh-token"];
-      sessionStorage.setItem("accessToken", accessToken);
-      sessionStorage.setItem("refreshToken", refreshToken);
+      const { data, status } = response;
 
-      isLoggedIn.value = true;
-      showLoginModal.value = false;
-      isValidToken.value = true;
+      if (status === 201) {
+        // 로그인 성공
+        const accessToken = data["access-token"];
+        const refreshToken = data["refresh-token"];
+        sessionStorage.setItem("accessToken", accessToken);
+        sessionStorage.setItem("refreshToken", refreshToken);
+
+        isLoggedIn.value = true;
+        isValidToken.value = true;
+        showLoginModal.value = false;
+
+        alert("로그인 성공! 환영합니다.");
+      } else if (status === 403) {
+        // 탈퇴한 사용자
+        alert(data.message || "탈퇴한 계정입니다. 로그인할 수 없습니다.");
+        isLoggedIn.value = false;
+        isValidToken.value = false;
+      } else if (status === 401) {
+        // 아이디 또는 비밀번호 오류
+        alert(data.message || "아이디 또는 비밀번호를 확인해주세요.");
+        isLoggedIn.value = false;
+        isValidToken.value = false;
+      } else {
+        // 기타 상태 코드 처리
+        alert(data.message || "알 수 없는 오류가 발생했습니다.");
+      }
     } catch (error) {
-      alert("아이디 또는 비밀번호를 확인해주세요.");
+      // 서버 오류 또는 네트워크 오류 처리
+      if (error.response) {
+        // 서버에서 반환된 에러 처리
+        const { status, data } = error.response;
+        if (status === 500) {
+          alert("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        } else {
+          alert(data.message || "로그인 중 문제가 발생했습니다.");
+        }
+      } else if (error.request) {
+        // 네트워크 오류 처리
+        alert("네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        // 기타 오류 처리
+        alert("오류가 발생했습니다: " + error.message);
+      }
       isLoggedIn.value = false;
       isValidToken.value = false;
     }

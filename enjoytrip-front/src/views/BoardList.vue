@@ -33,7 +33,7 @@
     </div>
 
     <!-- Board Content -->
-    <div class="container mx-auto py-6 px-4">
+    <div class="container mx-auto">
       <!-- Board Header -->
       <div class="flex justify-between items-center mb-6">
         <!-- Search Section -->
@@ -110,7 +110,7 @@
       </div>
     </div>
     <!-- Pagination Section -->
-    <div class="flex justify-center mt-6">
+    <div class="flex justify-center mt-4 mb-4">
       <button
         @click="changePage(currentPage - 1)"
         :disabled="currentPage === 1"
