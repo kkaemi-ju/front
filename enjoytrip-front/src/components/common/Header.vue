@@ -7,7 +7,11 @@
       >
         <div class="flex items-center gap-6">
           <router-link to="/" class="text-2xl font-bold text-[#00712D]">
-            <img src="/src/assets/img/logo3.jpg" height="230" width="130" />
+            <img
+              src="/src/assets/img/logo_white.png"
+              height="230"
+              width="130"
+            />
           </router-link>
         </div>
         <!-- Navigation Menu (Centered) -->
@@ -46,7 +50,11 @@
             to="/mypage"
             class="text-sm font-medium text-[#00712D] hover:text-[#FF9100] transition-colors hover:scale-150"
           >
-            <img src="/src/assets/img/mypage.jpg" width="80" height="85" />
+            <img
+              src="/src/assets/img/mypage_white.png"
+              width="80"
+              height="85"
+            />
           </router-link>
         </nav>
         <div class="flex items-center gap-4">
@@ -112,28 +120,28 @@ const menuItems = [
   {
     name: "여행계획",
     path: "/planlist",
-    image: "src/assets/img/plan2.jpg",
+    image: "src/assets/img/plan_white.png",
     width: 100,
     height: 25,
   },
   {
     name: "관광지 조회",
     path: "/attractions",
-    image: "src/assets/img/attraction2.jpg",
+    image: "src/assets/img/attraction_white.png",
     width: 170,
     height: 70,
   },
   {
     name: "게시판",
     path: "/board",
-    image: "src/assets/img/board2.jpg",
+    image: "src/assets/img/board_white.png",
     width: 90,
     height: 20,
   },
   {
     name: "트립클립",
     path: "/tripclip",
-    image: "src/assets/img/tripclip.jpg",
+    image: "src/assets/img/tripclip_white.png",
     width: 100,
     height: 30,
   },
