@@ -99,82 +99,86 @@
 
     <!-- List Section -->
     <div>
-      <div class="w-full">
+      <div class="w-full border rounded-lg">
         <table
-          class="min-w-full divide-y divide-gray-200"
+          class="min-w-full divide-y divide-gray-200 table-fixed"
           v-if="tripList.length > 0"
         >
           <thead class="bg-gray-50">
             <tr>
               <th
                 scope="col"
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="w-[150px] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 대표이미지
               </th>
               <th
                 scope="col"
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="w-[200px] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 관광지명
               </th>
               <th
                 scope="col"
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="w-[400px] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 주소
               </th>
               <th
                 scope="col"
-                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                class="w-[100px] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
                 찜하기
               </th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr
-              v-for="(trip, index) in tripList"
-              :key="`${trip.title}-${index}`"
-              @click="moveToCenter(trip)"
-            >
-              <td class="px-6 py-4 whitespace-nowrap">
-                <img
-                  :src="trip.firstImage1 || 'src/assets/img/no-img.png'"
-                  :alt="trip.title"
-                  width="100"
-                  class="h-20 w-20 rounded-md object-cover"
-                />
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">
-                  {{ trip.title }}
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500">
-                  {{ trip.addr1 }} {{ trip.addr2 }}
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <button
-                  @click="toggleFavorite(trip.no)"
-                  class="text-gray-400 hover:text-orange-500 focus:outline-none"
-                >
-                  <Heart
-                    :class="{
-                      'fill-orange-500 text-orange-500': favorites.includes(
-                        trip.no
-                      ),
-                    }"
-                  />
-                  <span class="sr-only">찜하기</span>
-                </button>
-              </td>
-            </tr>
-          </tbody>
         </table>
-        <p v-else class="text-center text-gray-600">검색 결과가 없습니다.</p>
+        <div class="max-h-[500px] overflow-y-auto">
+          <table class="min-w-full divide-y divide-gray-200 table-fixed">
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr
+                v-for="(trip, index) in tripList"
+                :key="`${trip.title}-${index}`"
+                @click="moveToCenter(trip)"
+                class="hover:bg-gray-50"
+              >
+                <td class="w-[150px] px-6 py-4 whitespace-nowrap">
+                  <img
+                    :src="trip.firstImage1 || 'src/assets/img/no-img.png'"
+                    :alt="trip.title"
+                    class="h-20 w-20 rounded-md object-cover"
+                  />
+                </td>
+                <td class="w-[200px] px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ trip.title }}
+                  </div>
+                </td>
+                <td class="w-[400px] px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-500">
+                    {{ trip.addr1 }} {{ trip.addr2 }}
+                  </div>
+                </td>
+                <td class="w-[100px] px-6 py-4 whitespace-nowrap">
+                  <button
+                    @click="toggleFavorite(trip.no)"
+                    class="text-gray-400 hover:text-orange-500 focus:outline-none"
+                  >
+                    <Heart
+                      :class="{
+                        'fill-orange-500 text-orange-500': favorites.includes(
+                          trip.no
+                        ),
+                      }"
+                    />
+                    <span class="sr-only">찜하기</span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- <p v-else class="text-center text-gray-600">검색 결과가 없습니다.</p> -->
       </div>
     </div>
   </div>
@@ -375,7 +379,7 @@ const updateMapCenter = (location) => {
   // 새 마커 추가
   const newMarker = new kakao.maps.Marker({
     position: newCenter, // 마커 위치를 새 중심 좌표로 설정
-    map: map.value, // 표시할 지도 객체
+    map: map.value, // 표시할 도 객체
     title: `${location} 중심 마커`, // 마커의 제목
   });
 
@@ -820,5 +824,24 @@ onUnmounted(() => {
 .search-button {
   @apply px-6 py-2 rounded-full bg-[#FF9100] text-white font-bold
            hover:bg-[#FF9100]/90 transition-colors duration-300;
+}
+
+/* 테이블 스크롤바 스타일링 */
+tbody::-webkit-scrollbar {
+  width: 6px;
+}
+
+tbody::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+tbody::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+tbody::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 </style>
