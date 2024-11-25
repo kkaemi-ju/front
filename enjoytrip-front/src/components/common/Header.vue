@@ -7,7 +7,7 @@
       >
         <div class="flex items-center gap-6">
           <router-link to="/" class="text-2xl font-bold text-[#00712D]">
-            TravelGo
+            떠나GO
           </router-link>
         </div>
         <!-- Navigation Menu (Centered) -->

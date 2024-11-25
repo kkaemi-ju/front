@@ -285,12 +285,9 @@ const getImageAndName = async (AttractionList) => {
       console.log("infos : " + response.data);
       hotSpots.value = response.data.map((info) => ({
         title: info.title,
-        image: info.firstImage1,
+        image: info.firstImage1 || "/src/assets/img/no-img.png",
         addr: info.addr1,
       }));
-      // console.log(
-      //   "infos (stringify): " + JSON.stringify(response.data, null, 2)
-      // );
     }
   } catch (error) {
     console.error(error.message);
