@@ -177,8 +177,8 @@
                       'flex-shrink-0 px-3 py-1 border rounded-full',
                       searchModel.selectedRecommendationType.content_type_id ===
                       tag.content_type_id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-blue-600',
+                        ? 'bg-green-600 text-white'
+                        : 'bg-white text-green-600',
                     ]"
                   >
                     {{ tag.content_type_name }}
@@ -253,7 +253,7 @@
                 @click="setMapCenter(item)"
               >
                 <div
-                  class="flex-shrink-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-medium -ml-4"
+                  class="flex-shrink-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-medium -ml-2 mr-2"
                 >
                   {{ index + 1 }}
                 </div>
@@ -261,7 +261,7 @@
                 <img
                   :src="item.firstImage1 || 'src/assets/img/no-img.png'"
                   alt="Item image"
-                  class="w-20 h-20 rounded-lg object-cover mr-4"
+                  class="w-20 h-20 rounded-lg object-cover mr-2"
                 />
                 <div class="flex-1">
                   <h2 class="font-bold text-base">{{ item.title }}</h2>
