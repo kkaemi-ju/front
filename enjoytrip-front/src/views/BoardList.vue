@@ -54,7 +54,7 @@
           />
           <button
             @click="searchPosts"
-            class="px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors"
+            class="px-4 py-2 bg-[#FF9100] text-white rounded-md hover:bg-[#FF9100]/90 transition-colors"
           >
             검색
           </button>
@@ -64,7 +64,7 @@
         <button
           v-if="canWrite"
           @click="goToPage('boardwrite')"
-          class="ml-auto px-4 py-2 bg-[#00712D] text-white rounded-md hover:bg-[#00712D]/90 transition-colors"
+          class="ml-auto px-4 py-2 bg-[#FF9100] text-white rounded-md hover:bg-[#FF9100]/90 transition-colors"
         >
           글쓰기
         </button>

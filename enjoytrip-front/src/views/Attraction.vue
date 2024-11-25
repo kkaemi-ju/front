@@ -479,7 +479,7 @@ const handleSearch = async () => {
     // console.log(
     //   `Recommendation Type: ${searchModel.value.selectedRecommendationType?.content_type_id}`
     // );
-
+    showFavorites.value = false;
     const searchTerm = searchModel.value.searchTerm.trim();
     const selectedLocation = searchModel.value.selectedLocation;
     const selectedRecommendationType =
@@ -522,6 +522,7 @@ const handleSearch = async () => {
     );
 
     tripList.value = response.data;
+
     addMarkers();
 
     await getFavorite();
@@ -530,109 +531,9 @@ const handleSearch = async () => {
   }
 };
 
-const addMarkers = () => {
-  // 기존 마커 제거
-  if (markers.value && Array.isArray(markers.value)) {
-    markers.value.forEach((item) => {
-      if (item && item.marker) {
-        item.marker.setMap(null); // 기존 마커를 지도에서 제거
-      }
-    });
-  }
-  markers.value = []; // 기존 마커 목록 초기화
-
-  // 첫 번째 마커의 위치를 저장할 변수
-  let firstMarkerPosition = null;
-
-  tripList.value.forEach((trip, index) => {
-    if (!trip.latitude || !trip.longitude) return; // 유효한 좌표만 처리
-
-    // 마커 위치
-    const markerPosition = new kakao.maps.LatLng(trip.latitude, trip.longitude);
-
-    // 첫 번째 마커의 위치를 저장
-    if (index === 0) {
-      firstMarkerPosition = markerPosition;
-    }
-
-    // 마커 이미지 설정
-    const imageSize = new kakao.maps.Size(24, 35);
-    const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
-
-    // 마커 생성
-    const marker = new kakao.maps.Marker({
-      map: map.value,
-      position: markerPosition,
-      title: trip.title,
-      image: markerImage,
-    });
-
-    // 인포윈도우 내용
-    const infowindowContent = `
-  <div style="padding: 10px; max-width: 200px; word-wrap: break-word; text-align: center; overflow: hidden; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); border-radius: 8px; font-family: Arial, sans-serif;">
-    <div style="margin-bottom: 10px;">
-      <img
-        src="${trip.firstImage1 || "src/assets/img/no-img.png"}"
-        alt="${trip.title}"
-        style="width: 100%; max-width: 150px; height: auto; border-radius: 4px;"
-      />
-    </div>
-    <strong style="font-size: 14px; color: #333;">${trip.title}</strong><br>
-    <span style="font-size: 11px; color: #777; display: block; margin-top: 5px;">
-      ${trip.addr1 || ""} ${trip.addr2 || ""}
-    </span>
-  </div>
-`;
-    const infowindow = new kakao.maps.InfoWindow({
-      content: infowindowContent,
-      removable: true,
-    });
-
-    // 마커 클릭 이벤트 추가
-    kakao.maps.event.addListener(marker, "click", () => {
-      // 모든 기존 인포윈도우 닫기
-      markers.value.forEach((item) => item.infowindow.close());
-
-      // 현재 클릭된 마커의 인포윈도우 열기
-      infowindow.open(map.value, marker);
-    });
-
-    // 새 마커와 인포윈도우를 배열에 추가
-    markers.value.push({
-      marker,
-      infowindow,
-    });
-  });
-
-  // 첫 번째 마커의 위치로 지도 중심 이동
-  if (firstMarkerPosition) {
-    map.value.setCenter(firstMarkerPosition);
-  }
-};
-
-const createMarkerWithInfoWindow = (trip) => {
-  if (!trip.latitude || !trip.longitude || !map.value) {
-    console.error("유효하지 않은 좌표 또는 지도 객체가 없습니다.");
-    return null;
-  }
-
-  // 마커 위치 설정
-  const markerPosition = new kakao.maps.LatLng(trip.latitude, trip.longitude);
-
-  // 마커 이미지 설정
-  const imageSize = new kakao.maps.Size(24, 35);
-  const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
-
-  // 마커 생성
-  const newMarker = new kakao.maps.Marker({
-    position: markerPosition,
-    map: map.value,
-    title: trip.title,
-    image: markerImage,
-  });
-
-  // 인포윈도우 내용 설정
-  const infowindowContent = `
+// 새로운 유틸리티 함수들
+const createInfoWindowContent = (trip) => {
+  return `
     <div style="padding: 10px; max-width: 200px; word-wrap: break-word; text-align: center; overflow: hidden; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); border-radius: 8px; font-family: Arial, sans-serif;">
       <div style="margin-bottom: 10px;">
         <img
@@ -647,8 +548,42 @@ const createMarkerWithInfoWindow = (trip) => {
       </span>
     </div>
   `;
+};
+
+const clearExistingMarkers = () => {
+  if (markers.value && Array.isArray(markers.value)) {
+    markers.value.forEach((item) => {
+      if (item && item.marker) {
+        item.marker.setMap(null);
+      }
+    });
+  }
+  markers.value = [];
+};
+
+const createMarker = (position, title) => {
+  const imageSize = new kakao.maps.Size(24, 35);
+  const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize);
+
+  return new kakao.maps.Marker({
+    position,
+    map: map.value,
+    title,
+    image: markerImage,
+  });
+};
+
+// 기존 createMarkerWithInfoWindow 함수 수정
+const createMarkerWithInfoWindow = (trip) => {
+  if (!trip.latitude || !trip.longitude || !map.value) {
+    console.error("유효하지 않은 좌표 또는 지도 객체가 없습니다.");
+    return null;
+  }
+
+  const markerPosition = new kakao.maps.LatLng(trip.latitude, trip.longitude);
+  const newMarker = createMarker(markerPosition, trip.title);
   const infowindow = new kakao.maps.InfoWindow({
-    content: infowindowContent,
+    content: createInfoWindowContent(trip),
     removable: true,
   });
 
@@ -657,42 +592,63 @@ const createMarkerWithInfoWindow = (trip) => {
 
   // 마커 클릭 이벤트 추가
   kakao.maps.event.addListener(newMarker, "click", () => {
-    // 모든 기존 인포윈도우 닫기
     markers.value.forEach((item) => item.infowindow.close());
-
-    // 현재 클릭된 마커의 인포윈도우 열기
     infowindow.open(map.value, newMarker);
   });
 
   return { marker: newMarker, infowindow };
 };
 
+// addMarkers 함수 수정
+const addMarkers = () => {
+  clearExistingMarkers();
+  let firstMarkerPosition = null;
+
+  tripList.value.forEach((trip, index) => {
+    if (!trip.latitude || !trip.longitude) return;
+
+    const markerPosition = new kakao.maps.LatLng(trip.latitude, trip.longitude);
+    if (index === 0) {
+      firstMarkerPosition = markerPosition;
+    }
+
+    const newMarker = createMarker(markerPosition, trip.title);
+    const infowindow = new kakao.maps.InfoWindow({
+      content: createInfoWindowContent(trip),
+      removable: true,
+    });
+
+    kakao.maps.event.addListener(newMarker, "click", () => {
+      markers.value.forEach((item) => item.infowindow.close());
+      infowindow.open(map.value, newMarker);
+    });
+
+    markers.value.push({ marker: newMarker, infowindow });
+  });
+
+  if (firstMarkerPosition) {
+    map.value.setCenter(firstMarkerPosition);
+  }
+};
+
+// moveToCenter 함수 수정
 const moveToCenter = (trip) => {
   if (!trip.latitude || !trip.longitude || !map.value) {
     console.error("유효하지 않은 좌표 또는 지도 객체가 없습니다.");
     return;
   }
 
-  // 지도 중심 이동
   const newCenter = new kakao.maps.LatLng(trip.latitude, trip.longitude);
   map.value.setCenter(newCenter);
 
-  // 기존 마커 제거
-  if (markers.value && Array.isArray(markers.value)) {
-    markers.value.forEach((item) => {
-      if (item && item.marker) {
-        item.marker.setMap(null);
-      }
-    });
-  }
-  markers.value = []; // 기존 마커 초기화
+  clearExistingMarkers();
 
-  // 새로운 마커와 인포윈도우 추가
   const newMarkerWithInfo = createMarkerWithInfoWindow(trip);
   if (newMarkerWithInfo) {
     markers.value.push(newMarkerWithInfo);
   }
 };
+
 const createFavorite = async (no) => {
   const response = await axios.post(`http://localhost/attraction/favorite`, {
     attractionsNo: no,
@@ -848,8 +804,8 @@ onUnmounted(() => {
 }
 
 .select-style {
-  @apply px-4 py-2 rounded-full border-2 border-[#00712D] bg-white text-[#00712D]
-           font-bold focus:outline-none focus:ring-2 focus:ring-[#FF9100];
+  @apply px-4 py-2 rounded-full border border-[#00712D] bg-white text-[#00712D]
+           font-bold focus:outline-none focus:ring-2 focus:ring-[#00712D];
 }
 
 .search-box {
@@ -862,7 +818,7 @@ onUnmounted(() => {
 }
 
 .search-button {
-  @apply px-6 py-2 rounded-full bg-[#00712D] text-white font-bold
-           hover:bg-[#FF9100] transition-colors duration-300;
+  @apply px-6 py-2 rounded-full bg-[#FF9100] text-white font-bold
+           hover:bg-[#FF9100]/90 transition-colors duration-300;
 }
 </style>

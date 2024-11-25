@@ -3,23 +3,27 @@
   <div class="min-h-screen bg-white">
     <!-- Top Date Selection Bar -->
     <div class="border-b">
-      <div
-        class="container mx-auto px-4 py-3 flex items-center justify-between"
-      >
+      <div class="px-4 py-3 flex items-center justify-between">
         <div class="flex items-center space-x-4">
           <div class="relative">
             <input
               v-model="tripPlan.tripName"
               type="text"
               placeholder="여행 제목"
-              class="px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#00712D]"
+              class="w-[200px] py-2 bg-transparent border-b-2 border-green-700 focus:outline-none text-xl font-bold"
+              :class="{
+                'border-opacity-100': focused,
+                'border-opacity-80': !focused,
+              }"
+              @focus="focused = true"
+              @blur="focused = false"
             />
           </div>
-          <div class="relative">
+          <div class="relative text-base">
             {{ formatDateRange }}
           </div>
         </div>
-        <div class="text-sm text-gray-500">
+        <div class="text-lg text-green-700 mr-2 font-bold">
           {{ sidoMapping[searchModel.selectedLocation] || "지역" }}
         </div>
       </div>
@@ -28,11 +32,8 @@
     <div class="flex relative">
       <!-- Left Sidebar -->
       <div
-        :class="[
-          'transition-all duration-300',
-          sidebarOpen ? 'w-[500px]' : 'w-0',
-        ]"
-        class="flex bg-white border-r overflow-hidden"
+        :class="['transition-all duration-300']"
+        class="w-[500px] flex bg-white border-r overflow-hidden"
       >
         <!-- Steps Navigation -->
         <div class="w-[160px] bg-white border-r flex flex-col justify-between">
@@ -68,7 +69,7 @@
           <div class="p-4">
             <button
               @click="saveTravel"
-              class="w-full px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
+              class="w-full bg-[#FF9100] px-4 py-2 text-white rounded-md hover:bg-black/90 transition-colors"
             >
               저장
             </button>
@@ -123,7 +124,7 @@
           <div v-if="currentStep === 2" class="p-4">
             <div class="flex items-center justify-between mb-4">
               <!-- Left Side: Title -->
-              <h3 class="text-lg font-medium">장소 선택</h3>
+              <h3 class="text-lg">장소 선택</h3>
               <!-- Right Side: Button -->
               <button
                 @click="openModal($event)"
@@ -189,14 +190,14 @@
                 </button>
               </div>
               <div
-                class="h-screen flex flex-col p-4 bg-gray-100"
+                class="h-screen flex flex-col p-4"
                 v-if="updatedTripList.length > 0"
               >
                 <div class="flex-1 overflow-y-auto">
                   <div
                     v-for="(item, index) in updatedTripList"
                     :key="`${item.title}-${index}`"
-                    class="flex items-center mb-4 p-4 bg-white rounded-lg shadow"
+                    class="flex items-center mb-4 p-4 bg-white rounded-lg shadow border"
                   >
                     <img
                       :src="item.firstImage1 || 'src/assets/img/no-img.png'"
@@ -216,7 +217,7 @@
                         @click="toggleSelected(item, index)"
                         :class="
                           item.selected
-                            ? 'bg-green-500 text-white'
+                            ? 'bg-orange-500 text-white'
                             : 'bg-gray-200 text-gray-500'
                         "
                         class="p-2 rounded-full transition-colors duration-200"
@@ -242,22 +243,28 @@
         ]"
         class="bg-white border-r overflow-hidden"
       >
-        <div class="h-screen flex flex-col p-4 bg-gray-100">
-          <h6 class="text-2xl font-bold mb-4">리스트</h6>
+        <div class="h-screen flex flex-col p-4">
+          <h3 class="text-xl mb-4">여행 리스트</h3>
           <div class="flex-1 overflow-y-auto">
             <TransitionGroup name="list" tag="div">
               <div
                 v-for="(item, index) in items[selectedDay]"
                 :key="item.no"
-                class="flex items-center mb-4 p-4 bg-white rounded-lg shadow"
+                class="border flex items-center mb-4 p-4 bg-white rounded-lg shadow"
               >
+                <div
+                  class="flex-shrink-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-medium -ml-4"
+                >
+                  {{ index + 1 }}
+                </div>
+
                 <img
                   :src="item.firstImage1 || 'src/assets/img/no-img.png'"
                   alt="Item image"
                   class="w-20 h-20 rounded-lg object-cover mr-4"
                 />
                 <div class="flex-1">
-                  <h2 class="font-bold text-lg">{{ item.title }}</h2>
+                  <h2 class="font-bold text-base">{{ item.title }}</h2>
                   <!-- <p class="text-gray-600">{{ item.description }}</p> -->
                 </div>
                 <div class="flex flex-col items-center space-y-2 ml-4">
@@ -290,13 +297,14 @@
 
       <!-- Collapse Button -->
       <button
+        v-if="currentStep === 2"
         @click="toggleSidebar"
         :class="[
           'absolute w-6 h-16 bg-white border border-l-0 rounded-r flex items-center justify-center hover:bg-gray-50 z-10 transition-all duration-300',
           { 'left-0': !sidebarOpen },
         ]"
         :style="{
-          left: sidebarOpen ? (currentStep === 2 ? '850px' : '500px') : '0px',
+          left: sidebarOpen ? '850px' : '500px',
         }"
       >
         <ChevronLeftIcon v-if="sidebarOpen" class="h-5 w-5" />
@@ -336,7 +344,8 @@
           TravelGo의 추천
         </h2>
         <p class="text-gray-600 text-lg">
-          {{ sidoMapping[searchModel.selectedLocation] }} Top 5 장소
+          {{ sidoMapping[searchModel.selectedLocation] }} Top
+          {{ topSidoAttData.length }} 장소
           <span class="inline-block animate-bounce ml-1">🔥</span>
         </p>
         <div
@@ -623,7 +632,7 @@ const handleSearch = async () => {
   }
 };
 
-// itemss와 itemssSelectedState를 동기화
+// 선택한 item과 새로운 tripList를 동기화
 const syncSelectedState = () => {
   updatedTripList.value.forEach((item) => {
     item.selected = false; // selected를 false로 설정
@@ -682,6 +691,7 @@ const toggleTag = async (tag) => {
     searchModel.value.selectedRecommendationType = tag;
   }
   await handleSearch();
+  syncSelectedState();
 };
 
 const formatter = new Intl.DateTimeFormat("ko-KR", {
@@ -1037,5 +1047,21 @@ canvas {
   padding: 10px;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+input {
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+/* Remove default input styles in WebKit browsers */
+input::-webkit-input-placeholder {
+  opacity: 0.5;
+}
+
+/* Remove default input styles in Firefox */
+input::-moz-placeholder {
+  opacity: 0.5;
 }
 </style>

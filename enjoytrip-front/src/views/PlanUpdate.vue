@@ -3,23 +3,27 @@
   <div class="min-h-screen bg-white">
     <!-- Top Date Selection Bar -->
     <div class="border-b">
-      <div
-        class="container mx-auto px-4 py-3 flex items-center justify-between"
-      >
+      <div class="mx-auto px-4 py-3 flex items-center justify-between">
         <div class="flex items-center space-x-4">
           <div class="relative">
             <input
               v-model="tripPlan.tripName"
               type="text"
               placeholder="여행 제목"
-              class="px-4 py-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#00712D]"
+              class="w-[200px] py-2 bg-transparent border-b-2 border-green-700 focus:outline-none text-xl font-bold"
+              :class="{
+                'border-opacity-100': focused,
+                'border-opacity-80': !focused,
+              }"
+              @focus="focused = true"
+              @blur="focused = false"
             />
           </div>
-          <div class="relative">
+          <div class="relative text-base">
             {{ formatDateRange }}
           </div>
         </div>
-        <div class="text-sm text-gray-500">
+        <div class="text-lg text-green-700 mr-2 font-bold">
           {{ sidoMapping[searchModel.selectedLocation] || "지역" }}
         </div>
       </div>
@@ -28,11 +32,8 @@
     <div class="flex relative">
       <!-- Left Sidebar -->
       <div
-        :class="[
-          'transition-all duration-300',
-          sidebarOpen ? 'w-[500px]' : 'w-[500px]',
-        ]"
-        class="flex bg-white border-r overflow-hidden"
+        :class="['transition-all duration-300']"
+        class="w-[500px] flex bg-white border-r overflow-hidden"
       >
         <!-- Steps Navigation -->
         <div class="w-[160px] bg-white border-r flex flex-col justify-between">
@@ -68,7 +69,7 @@
           <div class="p-4">
             <button
               @click="saveTravel"
-              class="w-full px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
+              class="w-full px-4 py-2 bg-[#FF9100] text-white rounded-md hover:bg-black/90 transition-colors"
             >
               저장
             </button>
@@ -261,7 +262,7 @@
           { 'left-0': !sidebarOpen },
         ]"
         :style="{
-          left: sidebarOpen ? (currentStep === 2 ? '850px' : '500px') : '0px',
+          left: sidebarOpen ? '850px' : '500px',
         }"
       >
         <ChevronLeftIcon v-if="sidebarOpen" class="h-5 w-5" />
@@ -631,6 +632,7 @@ const toggleTag = async (tag) => {
     searchModel.value.selectedRecommendationType = tag;
   }
   await handleSearch();
+  syncSelectedState();
 };
 
 const formatter = new Intl.DateTimeFormat("ko-KR", {
@@ -893,5 +895,21 @@ canvas {
 
 .list-move {
   transition: transform 0.3s ease;
+}
+
+input {
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+/* Remove default input styles in WebKit browsers */
+input::-webkit-input-placeholder {
+  opacity: 0.5;
+}
+
+/* Remove default input styles in Firefox */
+input::-moz-placeholder {
+  opacity: 0.5;
 }
 </style>

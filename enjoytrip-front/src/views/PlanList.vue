@@ -5,7 +5,7 @@
         <h1 class="text-2xl font-bold text-[#00712D]">여행 계획</h1>
 
         <button
-          class="bg-[#00712D] hover:bg-[#00712D]/90 text-white px-4 py-2 rounded-md flex items-center"
+          class="bg-[#FF9100] hover:bg-[#FF9100]/90 text-white px-4 py-2 rounded-md flex items-center"
           @click="addNewPlan"
         >
           <PlusIcon class="mr-2 h-4 w-4" />
@@ -60,6 +60,37 @@
           </tbody>
         </table>
       </div>
+      <div class="flex justify-center mt-6">
+        <button
+          @click="prevPage"
+          :disabled="currentPage === 1"
+          class="px-4 py-2 mx-1 text-white bg-[#00712D] rounded-md hover:bg-[#00712D]/90 disabled:opacity-50"
+        >
+          이전
+        </button>
+
+        <button
+          v-for="pageNum in displayedPages"
+          :key="pageNum"
+          @click="goToPage(pageNum)"
+          :class="[
+            'px-4 py-2 mx-1 rounded-md',
+            pageNum === currentPage
+              ? 'bg-[#D5ED9F]/30 text-[#00712D]'
+              : 'text-gray-600 bg-white hover:bg-[#D5ED9F]/30',
+          ]"
+        >
+          {{ pageNum }}
+        </button>
+
+        <button
+          @click="nextPage"
+          :disabled="currentPage === totalPages"
+          class="px-4 py-2 mx-1 text-white bg-[#00712D] rounded-md hover:bg-[#00712D]/90 disabled:opacity-50"
+        >
+          다음
+        </button>
+      </div>
     </div>
     <DateRangeModal
       :isVisible="isModalVisible"
@@ -71,9 +102,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import axios from "axios";
-import { PlusIcon } from "lucide-vue-next";
+import { PlusIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { storeToRefs } from "pinia";
@@ -85,16 +116,65 @@ const isModalVisible = ref(false);
 const selectedDateRange = ref(null);
 const router = useRouter();
 
-const plans = ref([]);
+const currentPage = ref(1);
+const itemsPerPage = 10;
+const allPlans = ref([]);
+
+const plans = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return allPlans.value.slice(start, end);
+});
+
+const totalPages = computed(() => {
+  return Math.ceil(allPlans.value.length / itemsPerPage);
+});
+
+const displayedPages = computed(() => {
+  const pages = [];
+  let start = Math.max(1, currentPage.value - 2);
+  let end = Math.min(totalPages.value, start + 4);
+
+  if (end - start < 4) {
+    start = Math.max(1, end - 4);
+  }
+
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
+  }
+  return pages;
+});
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+  }
+};
+
+const goToPage = (pageNum) => {
+  currentPage.value = pageNum;
+};
+
 const fetchPlans = async () => {
   try {
     const response = await axios.get(
       `http://localhost/tripplan/${userInfo.value.userId}`
     );
-    console.log(response);
-    plans.value = response.data.map((plan, index) => ({
+
+    const sortedData = response.data.sort(
+      (a, b) => b.tripPlanId - a.tripPlanId
+    ); // 내림차순 정렬
+    const totalCount = sortedData.length; // 전체 게시글 수
+
+    allPlans.value = sortedData.map((plan, index) => ({
       tripPlanId: plan.tripPlanId,
-      id: index + 1, // 순차적으로 1부터 시작하는 번호 할당
+      id: totalCount - index, // 전체 개수에서 차감하면서 id 부여
       title: plan.tripName,
       dateRange: `${plan.startDate}~${plan.endDate}`,
     }));
@@ -102,6 +182,7 @@ const fetchPlans = async () => {
     console.error("Error fetching trip plans:", error);
   }
 };
+
 const calculateDays = (startDate, endDate) => {
   if (!startDate || !endDate) return 0; // 날짜가 없으면 0 반환
 
@@ -160,4 +241,14 @@ onMounted(() => {
 
 <style scoped>
 /* 추가적인 스타일이 필요한 경우 여기에 작성 */
+
+/* 페이지네이션 버튼 호버 효과 */
+button:not(:disabled):hover {
+  opacity: 0.9;
+}
+
+/* 페이지네이션 버튼 트랜지션 */
+button {
+  transition: all 0.2s ease-in-out;
+}
 </style>
