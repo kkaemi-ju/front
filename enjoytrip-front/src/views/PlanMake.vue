@@ -1,4 +1,3 @@
-```
 <template>
   <div class="min-h-screen bg-white">
     <!-- Top Date Selection Bar -->
@@ -250,7 +249,8 @@
               <div
                 v-for="(item, index) in items[selectedDay]"
                 :key="item.no"
-                class="border flex items-center mb-4 p-4 bg-white rounded-lg shadow"
+                class="border flex items-center mb-4 p-4 bg-white rounded-lg shadow cursor-pointer hover:bg-gray-50"
+                @click="setMapCenter(item)"
               >
                 <div
                   class="flex-shrink-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-medium -ml-4"
@@ -714,7 +714,7 @@ const toggleSidebar = async () => {
 
 const saveTravel = async () => {
   if (tripPlan.value.tripName === "") {
-    alert("여행 제목을 입력해주세요.");
+    alert("여행 제목을 입력��주세요.");
     return;
   }
   const currentDate = new Date(route.query.startdate);
@@ -1005,6 +1005,11 @@ onUnmounted(() => {
     chartInstance = null;
   }
 });
+
+const setMapCenter = (item) => {
+  const newCenter = new kakao.maps.LatLng(item.latitude, item.longitude);
+  map.value.setCenter(newCenter);
+};
 </script>
 
 <style scoped>
