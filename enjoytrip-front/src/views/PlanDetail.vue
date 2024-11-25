@@ -1,16 +1,36 @@
 <template>
   <div class="min-h-screen bg-white">
     <!-- Top Date Selection Bar -->
-    <div class="border-b">
-      <div
-        class="container mx-auto px-4 py-3 flex items-center justify-between"
-      >
-        <div class="flex items-center space-x-4">
-          <h2 class="text-black">{{ travelTitle }}</h2>
-          <h2 class="text-black">{{ startDate }}-{{ endDate }}</h2>
+    <header class="border-b">
+      <div class="mx-auto px-2 sm:px-4 lg:px-6">
+        <div
+          class="py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
+          <div class="flex items-center space-x-3">
+            <MapPinIcon
+              class="mb-2 h-5 w-5 text-emerald-600 translate-y-[1px]"
+            />
+            <div class="flex items-center">
+              <h1 class="text-xl font-semibold text-gray-900">
+                {{ travelTitle }}
+              </h1>
+            </div>
+          </div>
+
+          <div class="flex flex-col items-end">
+            <div
+              class="flex items-center space-x-2 bg-white px-3 py-1 rounded-lg shadow-sm border border-green-700"
+            >
+              <CalendarIcon class="h-4 w-4 text-green-700" />
+              <div class="flex items-center text-sm">
+                {{ formattedDateRange }}
+              </div>
+            </div>
+            <span class="text-base mt-1">{{ locationName }}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </header>
 
     <div class="flex relative">
       <!-- Left Sidebar -->
@@ -23,7 +43,7 @@
       >
         <!-- Steps Navigation -->
         <div class="w-[160px] bg-white border-r flex flex-col justify-between">
-          <div class="h-screen flex flex-col items-center p-4 bg-gray-100">
+          <div class="h-screen flex flex-col items-center p-4 bg-white">
             <div class="flex-1 w-full max-w-md overflow-y-auto space-y-4 mb-4">
               <div
                 v-for="(day, index) in days"
@@ -33,13 +53,11 @@
                 <button
                   @click="selectDay(index)"
                   :class="[
-                    'w-full rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200 font-medium text-center',
+                    'w-full rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200 font-medium text-center border',
+                    currentDay === index
+                      ? 'border-[#00712D] bg-[#00712D] text-white'
+                      : 'border-[#00712D] text-[#00712D] bg-white',
                   ]"
-                  :style="{
-                    backgroundColor:
-                      currentDay === index ? '#00712D' : '#FFFFFF',
-                    color: currentDay === index ? '#FFFFFF' : '#00712D',
-                  }"
                 >
                   {{ day }}
                 </button>
@@ -62,15 +80,20 @@
 
         <!-- Content Area -->
         <div class="flex-1 bg-white">
-          <div class="h-screen flex flex-col p-4 bg-gray-100">
-            <h1 class="text-2xl font-bold mb-4">{{ locationName }}</h1>
+          <div class="h-screen flex flex-col p-4 bg-white">
             <div class="flex-1 overflow-y-auto">
               <TransitionGroup name="list" tag="div">
                 <div
-                  v-for="item in items[currentDay]"
+                  v-for="(item, index) in items[currentDay]"
                   :key="item.no"
-                  class="flex items-center mb-4 p-4 bg-white rounded-lg shadow"
+                  class="border border-gray-200 flex items-center mb-4 p-4 bg-white rounded-lg shadow cursor-pointer hover:bg-gray-50"
+                  @click="setMapCenter(item)"
                 >
+                  <div
+                    class="flex-shrink-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-medium -ml-2 mr-2"
+                  >
+                    {{ index + 1 }}
+                  </div>
                   <img
                     :src="item.firstImage1 || 'src/assets/img/no-img.png'"
                     alt="Item image"
@@ -111,6 +134,8 @@ import {
   TrashIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  MapPinIcon,
+  CalendarIcon,
 } from "lucide-vue-next";
 import axios from "axios";
 import { useRouter, useRoute } from "vue-router";
@@ -403,6 +428,32 @@ onUnmounted(() => {
     chartInstance = null;
   }
 });
+
+// 날짜 포맷터 추가
+const formatter = new Intl.DateTimeFormat("ko-KR", {
+  year: "numeric",
+  month: "long",
+  day: "2-digit",
+});
+
+// 날짜 포맷을 위한 computed 속성 추가
+const formattedDateRange = computed(() => {
+  if (!startDate.value || !endDate.value) return "";
+
+  try {
+    const formattedStart = formatter.format(new Date(startDate.value));
+    const formattedEnd = formatter.format(new Date(endDate.value));
+    return `${formattedStart} ~ ${formattedEnd}`;
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return "";
+  }
+});
+
+const setMapCenter = (item) => {
+  const newCenter = new kakao.maps.LatLng(item.latitude, item.longitude);
+  map.value.setCenter(newCenter);
+};
 </script>
 
 <style scoped>

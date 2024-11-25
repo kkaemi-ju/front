@@ -1,32 +1,63 @@
 <template>
   <div class="min-h-screen bg-white">
     <!-- Top Date Selection Bar -->
-    <div class="border-b">
-      <div class="px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-          <div class="relative">
-            <input
-              v-model="tripPlan.tripName"
-              type="text"
-              placeholder="여행 제목"
-              class="w-[200px] py-2 bg-transparent border-b-2 border-green-700 focus:outline-none text-xl font-bold"
-              :class="{
-                'border-opacity-100': focused,
-                'border-opacity-80': !focused,
-              }"
-              @focus="focused = true"
-              @blur="focused = false"
+    <header class="border-b">
+      <div class="mx-auto px-2 sm:px-4 lg:px-6">
+        <div
+          class="py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
+          <div class="flex items-center space-x-3">
+            <MapPinIcon
+              class="mb-4 h-6 w-6 text-emerald-600 translate-y-[1px]"
             />
+            <div class="flex items-center">
+              <h1
+                v-if="!isEditing"
+                class="text-2xl font-semibold text-gray-900"
+              >
+                {{ tripPlan.tripName }}
+              </h1>
+              <input
+                v-else
+                v-model="editedTitle"
+                class="text-2xl font-bold text-gray-900 border-b-2 border-emerald-300 focus:outline-none focus:border-emerald-500"
+                @keyup.enter="saveTitle"
+              />
+              <button
+                v-if="!isEditing"
+                @click="startEditing"
+                class="ml-2 text-emerald-600 hover:text-emerald-700 translate-y-[1px] mb-4"
+                aria-label="제목 수정"
+              >
+                <PencilIcon class="h-4 w-4" />
+              </button>
+              <button
+                v-else
+                @click="saveTitle"
+                class="ml-2 text-emerald-600 hover:text-emerald-700 translate-y-[1px]"
+                aria-label="제목 저장"
+              >
+                <CheckIcon class="h-5 w-5" />
+              </button>
+            </div>
           </div>
-          <div class="relative text-base">
-            {{ formatDateRange }}
+
+          <div class="flex flex-col items-end">
+            <div
+              class="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-green-700"
+            >
+              <CalendarIcon class="h-5 w-5 text-green-700" />
+              <div class="flex items-center text-base">
+                {{ formatDateRange }}
+              </div>
+            </div>
+            <span class="text-lg mt-1">{{
+              sidoMapping[searchModel.selectedLocation] || "지역"
+            }}</span>
           </div>
-        </div>
-        <div class="text-lg text-green-700 mr-2 font-bold">
-          {{ sidoMapping[searchModel.selectedLocation] || "지역" }}
         </div>
       </div>
-    </div>
+    </header>
 
     <div class="flex relative">
       <!-- Left Sidebar -->
@@ -104,7 +135,7 @@
                 <h2
                   class="text-2xl font-extrabold text-[#00712D] mb-2 relative inline-block"
                 >
-                  TravelGo의 추천
+                  떠나고GO의 추천
                 </h2>
                 <p class="text-gray-600 text-lg">
                   가장 핫한 지역 Top 3
@@ -341,11 +372,11 @@
         <h2
           class="text-2xl font-extrabold text-[#00712D] mb-2 relative inline-block"
         >
-          TravelGo의 추천
+          떠나고GO의 추천
         </h2>
         <p class="text-gray-600 text-lg">
           {{ sidoMapping[searchModel.selectedLocation] }} Top
-          {{ topSidoAttData.length }} 장소
+          {{ topSidoAttData.labels.length }} 장소
           <span class="inline-block animate-bounce ml-1">🔥</span>
         </p>
         <div
@@ -370,6 +401,9 @@ import {
   ChevronDownIcon,
   MousePointerClick,
   X,
+  MapPinIcon,
+  CalendarIcon,
+  PencilIcon,
 } from "lucide-vue-next";
 import Chart from "chart.js/auto";
 import { useRouter, useRoute } from "vue-router";
@@ -465,7 +499,7 @@ const searchModel = ref({
   },
 });
 const tripPlan = ref({
-  tripName: "",
+  tripName: "제목 입력",
   startDate: new Date(route.query.startdate).toISOString().split("T")[0],
   endDate: new Date(route.query.enddate).toISOString().split("T")[0],
   userId: userInfo.value.userId,
@@ -542,7 +576,7 @@ const clearMarkersAndPolyline = () => {
   // 기존 마커 제거
   markers.value.forEach((marker) => {
     if (marker && typeof marker.setMap === "function") {
-      marker.setMap(null); // 지도에서 마커 제거
+      marker.setMap(null); // 지도에서 마커 거
     }
   });
   markers.value = []; // 빈 배열로 초기화하여 Vue 상태 업데이트
@@ -714,7 +748,7 @@ const toggleSidebar = async () => {
 
 const saveTravel = async () => {
   if (tripPlan.value.tripName === "") {
-    alert("여행 제목을 입력��주세요.");
+    alert("여행 제목을 입력주세요.");
     return;
   }
   const currentDate = new Date(route.query.startdate);
@@ -925,9 +959,23 @@ const fetchTopSidoCodesAtt = async () => {
   } catch (error) {}
 };
 
-// Watchers
-watch([currentStep, sidebarOpen], async ([step, open]) => {
-  if (step === 1 && open) {
+// sidebarOpen과 currentStep을 분리하여 각각 감시
+watch(sidebarOpen, async (isOpen) => {
+  if (currentStep.value === 1) {
+    if (isOpen) {
+      await renderChart();
+    } else {
+      if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+      }
+    }
+  }
+});
+
+watch(currentStep, async (step) => {
+  if (step === 1) {
+    await nextTick();
     await renderChart();
   } else {
     if (chartInstance) {
@@ -936,6 +984,7 @@ watch([currentStep, sidebarOpen], async ([step, open]) => {
     }
   }
 });
+
 // Sidebar 상태를 감시하여 지도 크기 재조정
 watch(sidebarOpen, (newValue) => {
   nextTick(() => {
@@ -1010,6 +1059,22 @@ const setMapCenter = (item) => {
   const newCenter = new kakao.maps.LatLng(item.latitude, item.longitude);
   map.value.setCenter(newCenter);
 };
+
+// 제목 수정 관련 상태 추가
+const isEditing = ref(false);
+const editedTitle = ref("");
+
+const startEditing = () => {
+  editedTitle.value = tripPlan.value.tripName;
+  isEditing.value = true;
+};
+
+const saveTitle = () => {
+  if (editedTitle.value.trim()) {
+    tripPlan.value.tripName = editedTitle.value;
+  }
+  isEditing.value = false;
+};
 </script>
 
 <style scoped>
@@ -1068,5 +1133,29 @@ input::-webkit-input-placeholder {
 /* Remove default input styles in Firefox */
 input::-moz-placeholder {
   opacity: 0.5;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+header {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.rounded-lg {
+  transition: all 0.2s ease-in-out;
+}
+
+.rounded-lg:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 </style>

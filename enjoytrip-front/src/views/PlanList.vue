@@ -13,53 +13,26 @@
         </button>
       </div>
 
-      <div class="bg-white rounded-lg shadow overflow-hidden">
-        <table class="min-w-full">
-          <thead class="bg-[#D5ED9F]/30">
-            <tr>
-              <th
-                class="w-[100px] px-6 py-3 text-left text-sm font-medium text-[#00712D]"
-              >
-                번호
-              </th>
-              <th
-                class="px-6 py-3 text-left text-sm font-medium text-[#00712D]"
-              >
-                여행 계획
-              </th>
-              <th
-                class="px-6 py-3 text-left text-sm font-medium text-[#00712D]"
-              >
-                기간
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
-            <tr
-              v-for="plan in plans"
-              :key="plan.id"
-              class="hover:bg-[#FFFBE6]/50 transition-colors cursor-pointer"
-              @click="viewPlanDetails(plan.tripPlanId)"
-            >
-              <td class="px-6 py-4 text-sm text-gray-600">{{ plan.id }}</td>
-              <td class="px-6 py-4">
-                <div class="flex items-center">
-                  {{ plan.title }}
-                  <span
-                    v-if="plan.id === 1"
-                    class="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-[#FF9100] text-white"
-                  >
-                    New
-                  </span>
-                </div>
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-600">
-                {{ plan.dateRange }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Board Layout -->
+      <div
+        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+      >
+        <div
+          v-for="plan in plans"
+          :key="plan.tripPlanId"
+          @click="viewPlanDetails(plan.tripPlanId)"
+          class="cursor-pointer"
+        >
+          <TripPlanBoard
+            :date="plan.dateRange"
+            :title="plan.title"
+            :location="plan.location"
+            :imageSrc="plan.imageSrc"
+          />
+        </div>
       </div>
+
+      <!-- Pagination -->
       <div class="flex justify-center mt-6">
         <button
           @click="prevPage"
@@ -104,21 +77,72 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
-import { PlusIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-vue-next";
+import { PlusIcon } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { storeToRefs } from "pinia";
+import DateRangeModal from "../components/modal/SelectDate.vue";
+import TripPlanBoard from "../components/TripPlanBoard.vue";
+
 const userStore = useUserStore();
 const { userInfo } = storeToRefs(userStore);
-import DateRangeModal from "../components/modal/SelectDate.vue";
-
+const router = useRouter();
 const isModalVisible = ref(false);
 const selectedDateRange = ref(null);
-const router = useRouter();
-
 const currentPage = ref(1);
-const itemsPerPage = 10;
+const itemsPerPage = 8; // 한 페이지당 보여줄 카드 수 조정
 const allPlans = ref([]);
+const originalLocations = [
+  { sido_code: 1, sido_name: "서울", image: "/src/assets/img/Seoul.png" },
+  { sido_code: 2, sido_name: "인천", image: "/src/assets/img/Incheon.png" },
+  { sido_code: 3, sido_name: "대전", image: "/src/assets/img/Daejeon.png" },
+  { sido_code: 4, sido_name: "대구", image: "/src/assets/img/Daegu.png" },
+  { sido_code: 5, sido_name: "광주", image: "/src/assets/img/Gwangju.png" },
+  { sido_code: 6, sido_name: "부산", image: "/src/assets/img/Busan.png" },
+  { sido_code: 7, sido_name: "울산", image: "/src/assets/img/Ulsan.png" },
+  {
+    sido_code: 8,
+    sido_name: "세종",
+    image: "/src/assets/img/Sejong.png",
+  },
+  { sido_code: 31, sido_name: "경기도", image: "/src/assets/img/Gyeonggi.png" },
+  {
+    sido_code: 32,
+    sido_name: "강원도",
+    image: "/src/assets/img/Gangwon.png",
+  },
+  {
+    sido_code: 33,
+    sido_name: "충청북도",
+    image: "/src/assets/img/Chungbuk.png",
+  },
+  {
+    sido_code: 34,
+    sido_name: "충청남도",
+    image: "src/assets/img/Chungnam.png",
+  },
+  {
+    sido_code: 35,
+    sido_name: "경상북도",
+    image: "src/assets/img/Gyeongbuk.png",
+  },
+  {
+    sido_code: 36,
+    sido_name: "경상남도",
+    image: "src/assets/img/Gyeongnam.png",
+  },
+  {
+    sido_code: 37,
+    sido_name: "전라북도",
+    image: "/src/assets/img/Jeonbuk.png",
+  },
+  {
+    sido_code: 38,
+    sido_name: "전라남도",
+    image: "/src/assets/img/Jeonnam.png",
+  },
+  { sido_code: 39, sido_name: "제주도", image: "/src/assets/img/Jeju.png" },
+];
 
 const plans = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
@@ -161,6 +185,16 @@ const goToPage = (pageNum) => {
   currentPage.value = pageNum;
 };
 
+const getImageBySidoCode = (sidoCode) => {
+  const location = originalLocations.find((loc) => loc.sido_code === sidoCode);
+  return location ? location.image : "src/assets/img/no-img.png";
+};
+
+const getSidoNameByCode = (sidoCode) => {
+  const location = originalLocations.find((loc) => loc.sido_code === sidoCode);
+  return location ? location.sido_name : "";
+};
+
 const fetchPlans = async () => {
   try {
     const response = await axios.get(
@@ -169,15 +203,17 @@ const fetchPlans = async () => {
 
     const sortedData = response.data.sort(
       (a, b) => b.tripPlanId - a.tripPlanId
-    ); // 내림차순 정렬
-    const totalCount = sortedData.length; // 전체 게시글 수
+    );
 
-    allPlans.value = sortedData.map((plan, index) => ({
+    allPlans.value = sortedData.map((plan) => ({
       tripPlanId: plan.tripPlanId,
-      id: totalCount - index, // 전체 개수에서 차감하면서 id 부여
       title: plan.tripName,
       dateRange: `${plan.startDate}~${plan.endDate}`,
+      imageSrc: getImageBySidoCode(plan.sidoCode),
+      location: getSidoNameByCode(plan.sidoCode),
     }));
+
+    console.log("Mapped Plans:", allPlans.value); // 디버깅용
   } catch (error) {
     console.error("Error fetching trip plans:", error);
   }
@@ -230,7 +266,7 @@ const viewPlanDetails = (tripPlanId) => {
   router.push({
     name: "plandetail",
     query: {
-      tripPlanId, // 쿼리 매개변수로 tripPlanId 전달
+      tripPlanId, // 쿼리 매개변수로 tripPlanId 전
     },
   });
 };

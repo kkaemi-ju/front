@@ -60,21 +60,39 @@
       <!-- AI 추천 모달 -->
       <div
         v-if="isModalOpen"
-        class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50"
       >
-        <div class="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-          <h3 class="text-lg font-bold mb-4">AI 추천 결과</h3>
-          <ul class="list-disc pl-5 space-y-2">
-            <li v-for="(recommendation, index) in recommendations" :key="index">
-              {{ recommendation }}
-            </li>
-          </ul>
-          <button
-            @click="closeModal"
-            class="mt-4 px-4 py-2 ml-80 bg-[#FF9100] text-white rounded-full hover:bg-red-600 transition duration-300"
-          >
-            닫기
-          </button>
+        <div
+          class="bg-white p-8 rounded-2xl shadow-xl max-w-2xl w-full mx-4 relative"
+        >
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-[#00712D]">AI 추천 결과</h3>
+          </div>
+
+          <!-- Top 5 관광지 -->
+          <div class="mb-6">
+            <h4 class="text-lg font-bold text-[#00712D] mb-3">인기 관광지</h4>
+            <p class="text-gray-700 leading-relaxed whitespace-pre-line">
+              {{ recommendations.topSpots }}
+            </p>
+          </div>
+
+          <!-- 맛집 추천 -->
+          <div class="mb-6">
+            <h4 class="text-lg font-bold text-[#FF9100] mb-3">맛집 추천</h4>
+            <p class="text-gray-700 leading-relaxed whitespace-pre-line">
+              {{ recommendations.restaurants }}
+            </p>
+          </div>
+
+          <div class="mt-6 flex justify-end">
+            <button
+              @click="closeModal"
+              class="px-6 py-2 bg-[#FF9100] text-white rounded-full hover:bg-[#FF9100]/90 transition-all duration-300 font-medium"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       </div>
 
@@ -104,10 +122,15 @@
         </button>
         <div class="flex justify-center items-center">
           <button
-            @click="openWishlistModal"
-            class="px-4 py-2 bg-white text-[#FF9100] font-bold rounded-full border-2 border-[#FF9100] hover:bg-[#FF9100] hover:text-white transition duration-300"
+            @click="toggleFavorites"
+            :class="[
+              'px-4 py-2 font-bold rounded-full border-2 border-[#FF9100] transition duration-300',
+              showFavorites
+                ? 'bg-[#FF9100] text-white'
+                : 'bg-white text-[#FF9100] hover:bg-[#FF9100] hover:text-white',
+            ]"
           >
-            찜 목록 보기
+            찜 목록만 보기
           </button>
         </div>
       </div>
@@ -475,7 +498,7 @@ const selectLocation = async (index, location) => {
   updateMapCenter(location.sido_name); // 지도 업데이트
   scrollToCenter(index);
 
-  // 지도 검색
+  // 지 검색
   handleSearch();
 
   // AI 추천받아서 recommendations에 저장
@@ -485,24 +508,60 @@ const selectLocation = async (index, location) => {
 };
 
 // 모달 열기
-const openModal = () => {
-  if (!recommendations.value || recommendations.value.length === 0) {
-    alert("AI 추천 결과가 없습니다. 먼저 추천을 받아보세요!");
-    return;
-  }
-  // 데이터 parse
-  recommendations.value = parseRecommendations(recommendations.value);
+const openModal = async () => {
+  if (!selectedLocation.value) return;
+
+  const rawRecommendations = await getAIRecommendations(
+    selectedLocation.value.sido_name
+  );
+  const parsedData = parseRecommendations(rawRecommendations);
+
+  recommendations.value = {
+    title: parsedData.title,
+    topSpots: parsedData.topSpots,
+    restTitle: parsedData.restTitle,
+    restaurants: parsedData.restaurants,
+  };
 
   isModalOpen.value = true;
 };
 
 const parseRecommendations = (recommendations) => {
-  // 번호, 맛집 소개로 시작하는 데이터 기준으로 분리!!
+  let topSpots = "";
+  const restaurants = [];
 
-  return recommendations
-    .join(" ")
-    .split(/(?=\d\.\s|맛집\s소개)/)
-    .map((item) => item.trim());
+  recommendations.forEach((item) => {
+    if (typeof item === "string") {
+      // 문자열인 경우에만 처리
+      if (item.startsWith("맛집 소개:")) {
+        // 맛집 소개: 텍스트와 모든 특수 문자 제거
+        let restaurantInfo = item
+          .replace("맛집 소개: ", "")
+          .replace(/['"\\*]/g, ""); // 따옴표, 백슬래시, 별표 제거
+        restaurants.push(restaurantInfo);
+      } else if (/^\d\./.test(item)) {
+        // 모든 특수 문자 제거
+        let spotInfo = item.replace(/['"\\*]/g, "");
+        topSpots += spotInfo + "\n";
+      }
+    }
+  });
+
+  // restaurants 배열의 각 항목에 번호 추가
+  const numberedRestaurants = restaurants.map(
+    (item, index) => `${index + 1}. ${item}`
+  );
+
+  let newRestaurants = "";
+  for (let r of numberedRestaurants) {
+    newRestaurants += r + "\n";
+  }
+  return {
+    title: recommendations[0]?.replace(/['"\\*]/g, "") || "",
+    topSpots,
+    restTitle: "맛집 소개입니다.",
+    restaurants: newRestaurants,
+  };
 };
 
 // 모달 닫기
@@ -777,7 +836,7 @@ const getAIRecommendations = async (clickedRegion) => {
     );
     return response.data.recommendations;
   } catch (error) {
-    console.error("AI 추천 요청 중 오류 발생:", error);
+    console.error("AI 추천 요청 중 오류 발:", error);
     return [];
   }
 };

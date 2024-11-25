@@ -1,33 +1,62 @@
-```
 <template>
   <div class="min-h-screen bg-white">
     <!-- Top Date Selection Bar -->
-    <div class="border-b">
-      <div class="mx-auto px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-          <div class="relative">
-            <input
-              v-model="tripPlan.tripName"
-              type="text"
-              placeholder="여행 제목"
-              class="w-[200px] py-2 bg-transparent border-b-2 border-green-700 focus:outline-none text-xl font-bold"
-              :class="{
-                'border-opacity-100': focused,
-                'border-opacity-80': !focused,
-              }"
-              @focus="focused = true"
-              @blur="focused = false"
+    <header class="border-b">
+      <div class="mx-auto px-2 sm:px-4 lg:px-6">
+        <div
+          class="py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
+          <div class="flex items-center space-x-3">
+            <MapPinIcon
+              class="mb-4 h-6 w-6 text-emerald-600 translate-y-[1px]"
             />
+            <div class="flex items-center">
+              <h1
+                v-if="!isEditing"
+                class="text-2xl font-semibold text-gray-900"
+              >
+                {{ tripPlan.tripName }}
+              </h1>
+              <input
+                v-else
+                v-model="editedTitle"
+                class="text-2xl font-bold text-gray-900 border-b-2 border-emerald-300 focus:outline-none focus:border-emerald-500"
+                @keyup.enter="saveTitle"
+              />
+              <button
+                v-if="!isEditing"
+                @click="startEditing"
+                class="ml-2 text-emerald-600 hover:text-emerald-700 translate-y-[1px] mb-4"
+                aria-label="제목 수정"
+              >
+                <PencilIcon class="h-4 w-4" />
+              </button>
+              <button
+                v-else
+                @click="saveTitle"
+                class="ml-2 text-emerald-600 hover:text-emerald-700 translate-y-[1px]"
+                aria-label="제목 저장"
+              >
+                <CheckIcon class="h-5 w-5" />
+              </button>
+            </div>
           </div>
-          <div class="relative text-base">
-            {{ formatDateRange }}
+          <div class="flex flex-col items-end">
+            <div
+              class="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-green-700"
+            >
+              <CalendarIcon class="h-5 w-5 text-green-700" />
+              <div class="flex items-center text-base">
+                {{ formatDateRange }}
+              </div>
+            </div>
+            <span class="text-lg mt-1">{{
+              sidoMapping[searchModel.selectedLocation] || "지역"
+            }}</span>
           </div>
-        </div>
-        <div class="text-lg text-green-700 mr-2 font-bold">
-          {{ sidoMapping[searchModel.selectedLocation] || "지역" }}
         </div>
       </div>
-    </div>
+    </header>
 
     <div class="flex relative">
       <!-- Left Sidebar -->
@@ -122,7 +151,7 @@
                   placeholder="장소명을 입력하세요"
                   class="flex-1 border rounded-md px-4 py-2"
                 />
-                <button @click="handleSearch" class="ml-2">
+                <button @click="clickSearch" class="ml-2">
                   <SearchIcon class="h-5 w-5 text-gray-500" />
                 </button>
               </div>
@@ -142,8 +171,8 @@
                       'flex-shrink-0 px-3 py-1 border rounded-full',
                       searchModel.selectedRecommendationType.content_type_id ===
                       tag.content_type_id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-blue-600',
+                        ? 'bg-green-600 text-white'
+                        : 'bg-white text-green-600',
                     ]"
                   >
                     {{ tag.content_type_name }}
@@ -181,7 +210,7 @@
                         @click="toggleSelected(item, index)"
                         :class="
                           item.selected
-                            ? 'bg-green-500 text-white'
+                            ? 'bg-orange-500 text-white'
                             : 'bg-gray-200 text-gray-500'
                         "
                         class="p-2 rounded-full transition-colors duration-200"
@@ -207,15 +236,21 @@
         ]"
         class="bg-white border-r overflow-hidden"
       >
-        <div class="h-screen flex flex-col p-4 bg-gray-100">
-          <h6 class="text-2xl font-bold mb-4">리스트</h6>
+        <div class="h-screen flex flex-col p-4">
+          <h3 class="text-xl mb-4">여행 리스트</h3>
           <div class="flex-1 overflow-y-auto">
             <TransitionGroup name="list" tag="div">
               <div
                 v-for="(item, index) in items[selectedDay]"
                 :key="item.no"
-                class="flex items-center mb-4 p-4 bg-white rounded-lg shadow"
+                class="border flex items-center mb-4 p-4 bg-white rounded-lg shadow cursor-pointer hover:bg-gray-50"
+                @click="setMapCenter(item)"
               >
+                <div
+                  class="flex-shrink-0 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-medium -ml-2 mr-2"
+                >
+                  {{ index + 1 }}
+                </div>
                 <img
                   :src="item.firstImage1 || 'src/assets/img/no-img.png'"
                   alt="Item image"
@@ -223,26 +258,26 @@
                 />
                 <div class="flex-1">
                   <h2 class="font-bold text-lg">{{ item.title }}</h2>
-                  <!-- <p class="text-gray-600">{{ item.description }}</p> -->
+                  <p class="text-gray-600">{{ item.addr1 }} {{ item.addr2 }}</p>
                 </div>
                 <div class="flex flex-col items-center space-y-2 ml-4">
                   <button
-                    @click="moveItem(index, -1)"
+                    @click.stop="moveItem(index, -1)"
                     :disabled="index === 0"
                     class="p-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
                   >
                     <ChevronUpIcon class="w-4 h-4" />
                   </button>
                   <button
-                    @click="moveItem(index, 1)"
-                    :disabled="index === items.length - 1"
+                    @click.stop="moveItem(index, 1)"
+                    :disabled="index === items[selectedDay].length - 1"
                     class="p-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
                   >
                     <ChevronDownIcon class="w-4 h-4" />
                   </button>
                 </div>
                 <button
-                  @click="removeItem(item.no)"
+                  @click.stop="removeItem(item.no)"
                   class="ml-2 text-gray-500 hover:text-red-500"
                 >
                   <TrashIcon class="w-5 h-5" />
@@ -291,6 +326,9 @@ import {
   TrashIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  MapPinIcon,
+  CalendarIcon,
+  PencilIcon,
 } from "lucide-vue-next";
 import Chart from "chart.js/auto";
 import { useRouter, useRoute } from "vue-router";
@@ -460,27 +498,6 @@ const createMarkersAndPolyline = () => {
   });
 };
 
-const addDistanceOverlay = (start, end, distance) => {
-  // 두 지점의 중간 위치 계산
-
-  const midPosition = new kakao.maps.LatLng(
-    (start.getLat() + end.getLat()) / 2,
-    (start.getLng() + end.getLng()) / 2
-  );
-
-  // 거리 정보 표시
-  const content = `<div style="padding:5px; background: white; border: 1px solid #ccc; border-radius: 3px;">${distance}m</div>`;
-  const overlay = new kakao.maps.CustomOverlay({
-    content,
-    map: map.value,
-    position: midPosition,
-    yAnchor: 0.5,
-    xAnchor: 0.5,
-  });
-
-  distanceOverlays.value.push(overlay);
-};
-
 const clearMarkersAndPolyline = () => {
   // 기존 마커 제거
   markers.value.forEach((marker) => {
@@ -509,7 +526,15 @@ const clearMarkersAndPolyline = () => {
   // 경로 초기화
   linePath.value = [];
 };
+const setMapCenter = (item) => {
+  const newCenter = new kakao.maps.LatLng(item.latitude, item.longitude);
+  map.value.setCenter(newCenter);
+};
 
+const clickSearch = async () => {
+  await handleSearch();
+  syncSelectedState();
+};
 const handleSearch = async () => {
   try {
     // console.log(`Search Term: ${searchModel.value.searchTerm}`);
@@ -849,14 +874,9 @@ onMounted(async () => {
 
     document.head.appendChild(script);
   }
-  console.log("item 체크");
-  console.log(items.value);
+
   await handleSearch();
-  console.log("item 체크2");
-  console.log(items.value);
   syncSelectedState();
-  console.log("item 체크3");
-  console.log(items.value);
   createMarkersAndPolyline();
 });
 
@@ -866,6 +886,22 @@ onUnmounted(() => {
     chartInstance = null;
   }
 });
+
+// 제목 수정 관련 상태 추가
+const isEditing = ref(false);
+const editedTitle = ref("");
+
+const startEditing = () => {
+  editedTitle.value = tripPlan.value.tripName;
+  isEditing.value = true;
+};
+
+const saveTitle = () => {
+  if (editedTitle.value.trim()) {
+    tripPlan.value.tripName = editedTitle.value;
+  }
+  isEditing.value = false;
+};
 </script>
 
 <style scoped>
