@@ -30,7 +30,7 @@
       <div
         :class="[
           'transition-all duration-300',
-          sidebarOpen ? 'w-[500px]' : 'w-0',
+          sidebarOpen ? 'w-[500px]' : 'w-[500px]',
         ]"
         class="flex bg-white border-r overflow-hidden"
       >
@@ -180,7 +180,7 @@
                         @click="toggleSelected(item, index)"
                         :class="
                           item.selected
-                            ? 'bg-pink-500 text-white'
+                            ? 'bg-green-500 text-white'
                             : 'bg-gray-200 text-gray-500'
                         "
                         class="p-2 rounded-full transition-colors duration-200"
@@ -254,6 +254,7 @@
 
       <!-- Collapse Button -->
       <button
+        v-if="currentStep === 2"
         @click="toggleSidebar"
         :class="[
           'absolute w-6 h-16 bg-white border border-l-0 rounded-r flex items-center justify-center hover:bg-gray-50 z-10 transition-all duration-300',
@@ -419,50 +420,42 @@ const initMap = () => {
 
   map.value = new kakao.maps.Map(mapContainer.value, options);
 };
+const createNumberMarker = (position, number) => {
+  const content = `
+          <div style="
+            position: relative;
+            width: 30px;
+            height: 30px;
+            background: #FF9100;
+            color: white;
+            font-size: 14px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.3);">
+            ${number + 1}
+          </div>
+        `;
+  const customOverlay = new kakao.maps.CustomOverlay({
+    map: map.value,
+    position: position,
+    content: content,
+    yAnchor: 0.5,
+    xAnchor: 0.5,
+  });
+  distanceOverlays.value.push(customOverlay);
+};
 const createMarkersAndPolyline = () => {
   // 좌표를 기반으로 마커 및 선 생성
   clearMarkersAndPolyline();
   linePath.value = []; // 초기화
-
+  console.log("createMarkersAnd");
+  console.log(items.value[selectedDay.value]);
   items.value[selectedDay.value].forEach((coord, index) => {
     const position = new kakao.maps.LatLng(coord.latitude, coord.longitude);
-    linePath.value.push(position);
-
-    // 마커 생성 및 지도에 추가
-    const marker = new kakao.maps.Marker({
-      map: map.value,
-      position,
-    });
-    markers.value = [...markers.value, marker];
-
-    // 마커 클릭 시 인포윈도우 표시
-    const infoContent = `<div style="padding:5px;">Point ${index + 1}</div>`;
-    const infowindow = new kakao.maps.InfoWindow({
-      content: infoContent,
-    });
-    kakao.maps.event.addListener(marker, "mouseover", () =>
-      infowindow.open(map.value, marker)
-    );
-    kakao.maps.event.addListener(marker, "mouseout", () => infowindow.close());
-
-    if (index > 0) {
-      const start = linePath.value[index - 1];
-      const end = linePath.value[index];
-
-      const polyline = new kakao.maps.Polyline({
-        map: map.value,
-        path: [start, end],
-        strokeWeight: 3,
-        strokeColor: "#db4040",
-        strokeOpacity: 1,
-        strokeStyle: "solid",
-      });
-      polylines.value.push(polyline);
-
-      // 거리 표시
-      const distance = Math.round(polyline.getLength());
-      addDistanceOverlay(start, end, distance);
-    }
+    createNumberMarker(position, index);
+    console.log("fdfdfd");
   });
 };
 
@@ -586,9 +579,7 @@ const syncSelectedState = () => {
   updatedTripList.value.forEach((item) => {
     item.selected = false; // selected를 false로 설정
   });
-  console.log("items.value");
-  console.log(items.value);
-  console.log(selectedDay.value);
+
   for (let selectDayItem of items.value[selectedDay.value]) {
     for (let trip of updatedTripList.value) {
       if (selectDayItem.no === trip.no) {
@@ -778,8 +769,6 @@ ${formatter.format(new Date(data.endDate))}`;
     const ccalDay = calDay.value;
     days.value = Array.from({ length: ccalDay }, (_, i) => `${i + 1}일차`);
     items.value = Array.from({ length: ccalDay }, () => []);
-    console.log("items!!!!");
-    console.log(items.value);
     // 데이터 분배
     data.attractions.forEach((attraction) => {
       const dayIndex = attraction.dayNumber - 1; // dayNumber 기준으로 일차 구분 (0-based)
@@ -787,11 +776,12 @@ ${formatter.format(new Date(data.endDate))}`;
         items.value[dayIndex].push(attraction); // 해당 일차 배열에 데이터 추가
       }
     });
-    console.log(items.value);
     // 일차별로 visitOrder 기준 정렬
     items.value.forEach((dayItems) => {
       dayItems.sort((a, b) => a.visitOrder - b.visitOrder);
     });
+    console.log(ccalDay);
+    console.log(items.value);
   } catch (error) {
     console.error("Error fetching trip details:", error);
   }
@@ -818,7 +808,6 @@ watch(currentStep, async (newValue) => {
 });
 // 일차 변경 시 itemss와 itemssSelectedState 동기화
 watch(selectedDay, () => {
-  console.log(items.value);
   syncSelectedState();
 
   createMarkersAndPolyline();
@@ -832,9 +821,9 @@ watch(
       if (initCheck.value) {
         const ccalDay = calDay.value;
         items.value = Array.from({ length: ccalDay }, () => []); // 올바른 초기화
-
         // 비동기 함수 호출
         await handleSearch();
+        createMarkersAndPolyline();
       }
       initCheck.value = true;
     }
@@ -858,9 +847,15 @@ onMounted(async () => {
 
     document.head.appendChild(script);
   }
-
+  console.log("item 체크");
+  console.log(items.value);
   await handleSearch();
+  console.log("item 체크2");
+  console.log(items.value);
   syncSelectedState();
+  console.log("item 체크3");
+  console.log(items.value);
+  createMarkersAndPolyline();
 });
 
 onUnmounted(() => {

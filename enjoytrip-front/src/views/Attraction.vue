@@ -70,34 +70,76 @@
 
     <!-- List Section -->
     <div>
-      <div
-        class="overflow-y-auto border border-gray-300 rounded-lg p-4"
-        style="max-height: 300px"
-      >
-        <table class="table table-striped w-full" v-if="tripList.length > 0">
-          <thead>
+      <div class="w-full">
+        <table
+          class="min-w-full divide-y divide-gray-200"
+          v-if="tripList.length > 0"
+        >
+          <thead class="bg-gray-50">
             <tr>
-              <th>대표이미지</th>
-              <th>관광지명</th>
-              <th>주소</th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                대표이미지
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                관광지명
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                주소
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                찜하기
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="bg-white divide-y divide-gray-200">
             <tr
               v-for="(trip, index) in tripList"
               :key="`${trip.title}-${index}`"
               @click="moveToCenter(trip)"
-              class="cursor-pointer hover:bg-gray-100"
             >
-              <td>
+              <td class="px-6 py-4 whitespace-nowrap">
                 <img
                   :src="trip.firstImage1 || 'src/assets/img/no-img.png'"
                   :alt="trip.title"
                   width="100"
+                  class="h-20 w-20 rounded-md object-cover"
                 />
               </td>
-              <td>{{ trip.title }}</td>
-              <td>{{ trip.addr1 }} {{ trip.addr2 }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">
+                  {{ trip.title }}
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-500">
+                  {{ trip.addr1 }} {{ trip.addr2 }}
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <button
+                  @click="toggleFavorite(trip.no)"
+                  class="text-gray-400 hover:text-red-500 focus:outline-none"
+                >
+                  <Heart
+                    :class="{
+                      'fill-red-500 text-red-500': favorites.includes(trip.no),
+                    }"
+                  />
+                  <span class="sr-only">찜하기</span>
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -111,7 +153,7 @@
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import axios from "axios";
 import { storeToRefs } from "pinia";
-
+import { Heart } from "lucide-vue-next";
 const originalLocations = [
   { sido_code: 1, sido_name: "서울" },
   { sido_code: 2, sido_name: "인천" },
@@ -188,6 +230,15 @@ const map = ref(null);
 const markerImageSrc =
   "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 마커 이미지 URL
 
+const favorites = ref([]);
+
+const toggleFavorite = (id) => {
+  if (favorites.value.includes(id)) {
+    favorites.value = favorites.value.filter((favId) => favId !== id);
+  } else {
+    favorites.value.push(id);
+  }
+};
 const initMap = () => {
   if (!mapContainer.value) {
     console.error("mapContainer가 초기화되지 않았습니다.");
@@ -543,7 +594,9 @@ const moveToCenter = (trip) => {
     markers.value.push(newMarkerWithInfo);
   }
 };
-
+const createFavorite = async (no) => {
+  const response = await axios.post(`http://localhost/attraction/favorite`, {});
+};
 watch(
   () => searchModel.value.selectedRecommendationType,
   (newValue, oldValue) => {

@@ -89,22 +89,6 @@
         </div>
       </div>
 
-      <!-- Collapse Button -->
-      <button
-        @click="toggleSidebar"
-        :class="[
-          'absolute w-6 h-16 bg-white border border-l-0 rounded-r flex items-center justify-center hover:bg-gray-50 z-10 transition-all duration-300',
-          { 'left-0': !sidebarOpen },
-        ]"
-        :style="{
-          left: sidebarOpen ? '500px' : '0px',
-          // 항상 부모 요소의 가운데에 위치
-        }"
-      >
-        <ChevronLeftIcon v-if="sidebarOpen" class="h-5 w-5" />
-        <ChevronRightIcon v-else class="h-5 w-5" />
-      </button>
-
       <!-- Right Content Area (Map Placeholder) -->
       <div
         ref="mapContainer"
@@ -269,51 +253,38 @@ const initMap = () => {
 
   map.value = new kakao.maps.Map(mapContainer.value, options);
 };
-
+const createNumberMarker = (position, number) => {
+  const content = `
+          <div style="
+            position: relative;
+            width: 30px;
+            height: 30px;
+            background: #FF9100;
+            color: white;
+            font-size: 14px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.3);">
+            ${number + 1}
+          </div>
+        `;
+  const customOverlay = new kakao.maps.CustomOverlay({
+    map: map.value,
+    position: position,
+    content: content,
+    yAnchor: 0.5,
+    xAnchor: 0.5,
+  });
+  distanceOverlays.value.push(customOverlay);
+};
 const createMarkersAndPolyline = () => {
   // 좌표를 기반으로 마커 및 선 생성
   clearMarkersAndPolyline();
-  linePath.value = []; // 초기화
-  console.log(items.value[currentDay.value]);
   items.value[currentDay.value].forEach((coord, index) => {
     const position = new kakao.maps.LatLng(coord.latitude, coord.longitude);
-    linePath.value.push(position);
-
-    // 마커 생성 및 지도에 추가
-    const marker = new kakao.maps.Marker({
-      map: map.value,
-      position,
-    });
-    markers.value = [...markers.value, marker];
-
-    // 마커 클릭 시 인포윈도우 표시
-    const infoContent = `<div style="padding:5px;">Point ${index + 1}</div>`;
-    const infowindow = new kakao.maps.InfoWindow({
-      content: infoContent,
-    });
-    kakao.maps.event.addListener(marker, "mouseover", () =>
-      infowindow.open(map.value, marker)
-    );
-    kakao.maps.event.addListener(marker, "mouseout", () => infowindow.close());
-
-    if (index > 0) {
-      const start = linePath.value[index - 1];
-      const end = linePath.value[index];
-
-      const polyline = new kakao.maps.Polyline({
-        map: map.value,
-        path: [start, end],
-        strokeWeight: 3,
-        strokeColor: "#db4040",
-        strokeOpacity: 1,
-        strokeStyle: "solid",
-      });
-      polylines.value.push(polyline);
-
-      // 거리 표시
-      const distance = Math.round(polyline.getLength());
-      addDistanceOverlay(start, end, distance);
-    }
+    createNumberMarker(position, index);
   });
 };
 const addDistanceOverlay = (start, end, distance) => {

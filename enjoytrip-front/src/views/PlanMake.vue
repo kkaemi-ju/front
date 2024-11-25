@@ -378,7 +378,7 @@ const currentStep = ref(1);
 
 const isModalOpen = ref(false);
 const modalPosition = ref({ top: 0, left: 0 });
-const chartCanvas = ref(null);
+
 let chartInstance = null;
 let chartInstance2 = null;
 //api 요청을 위한 data
@@ -475,13 +475,7 @@ const distanceOverlays = ref([]); // 거리 정보 오버레이
 
 const mapContainer = ref(null);
 const map = ref(null);
-const markerImageSrc =
-  "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 마커 이미지 URL
-const itemssSelectedState = ref(
-  Array.from({ length: Number(route.query.day) }, () =>
-    updatedTripList.value.map(() => false)
-  ) // 1일차, 2일차, 3일차
-);
+
 const length = Number(route.query.day);
 const items = ref(Array.from({ length }, () => [])); // 0: 1일차, 1: 2일차, 2: 3일차
 
@@ -498,6 +492,32 @@ const initMap = () => {
 
   map.value = new kakao.maps.Map(mapContainer.value, options);
 };
+const createNumberMarker = (position, number) => {
+  const content = `
+          <div style="
+            position: relative;
+            width: 30px;
+            height: 30px;
+            background: #FF9100;
+            color: white;
+            font-size: 14px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.3);">
+            ${number + 1}
+          </div>
+        `;
+  const customOverlay = new kakao.maps.CustomOverlay({
+    map: map.value,
+    position: position,
+    content: content,
+    yAnchor: 0.5,
+    xAnchor: 0.5,
+  });
+  distanceOverlays.value.push(customOverlay);
+};
 const createMarkersAndPolyline = () => {
   // 좌표를 기반으로 마커 및 선 생성
   clearMarkersAndPolyline();
@@ -505,65 +525,8 @@ const createMarkersAndPolyline = () => {
 
   items.value[selectedDay.value].forEach((coord, index) => {
     const position = new kakao.maps.LatLng(coord.latitude, coord.longitude);
-    linePath.value.push(position);
-
-    // 마커 생성 및 지도에 추가
-    const marker = new kakao.maps.Marker({
-      map: map.value,
-      position,
-    });
-    markers.value = [...markers.value, marker];
-
-    // 마커 클릭 시 인포윈도우 표시
-    const infoContent = `<div style="padding:5px;">Point ${index + 1}</div>`;
-    const infowindow = new kakao.maps.InfoWindow({
-      content: infoContent,
-    });
-    kakao.maps.event.addListener(marker, "mouseover", () =>
-      infowindow.open(map.value, marker)
-    );
-    kakao.maps.event.addListener(marker, "mouseout", () => infowindow.close());
-
-    if (index > 0) {
-      const start = linePath.value[index - 1];
-      const end = linePath.value[index];
-
-      const polyline = new kakao.maps.Polyline({
-        map: map.value,
-        path: [start, end],
-        strokeWeight: 3,
-        strokeColor: "#db4040",
-        strokeOpacity: 1,
-        strokeStyle: "solid",
-      });
-      polylines.value.push(polyline);
-
-      // 거리 표시
-      const distance = Math.round(polyline.getLength());
-      addDistanceOverlay(start, end, distance);
-    }
+    createNumberMarker(position, index);
   });
-};
-
-const addDistanceOverlay = (start, end, distance) => {
-  // 두 지점의 중간 위치 계산
-
-  const midPosition = new kakao.maps.LatLng(
-    (start.getLat() + end.getLat()) / 2,
-    (start.getLng() + end.getLng()) / 2
-  );
-
-  // 거리 정보 표시
-  const content = `<div style="padding:5px; background: white; border: 1px solid #ccc; border-radius: 3px;">${distance}m</div>`;
-  const overlay = new kakao.maps.CustomOverlay({
-    content,
-    map: map.value,
-    position: midPosition,
-    yAnchor: 0.5,
-    xAnchor: 0.5,
-  });
-
-  distanceOverlays.value.push(overlay);
 };
 
 const clearMarkersAndPolyline = () => {
@@ -684,12 +647,13 @@ const toggleSelected = (item, index) => {
   } else {
     items.value[selectedDay.value].push(item);
     updatedTripList.value[index].selected = true;
+    const newCenter = new kakao.maps.LatLng(item.latitude, item.longitude);
+
+    map.value.setCenter(newCenter);
     // addCoordinate(item);
   }
   createMarkersAndPolyline();
 };
-
-const selectedTag = ref(); // 현재 선택된 태그 저장
 
 const scrollContainer = ref(null);
 
@@ -719,9 +683,7 @@ const toggleTag = async (tag) => {
   }
   await handleSearch();
 };
-const filteredPlaces = computed(() => {
-  return places.value.filter((place) => place.name.includes(searchQuery.value));
-});
+
 const formatter = new Intl.DateTimeFormat("ko-KR", {
   year: "numeric",
   month: "long",
@@ -771,7 +733,6 @@ const saveTravel = async () => {
     tripPlan.value.days.push(planDay);
     currentDate.setDate(currentDate.getDate() + 1);
   }
-  console.log(tripPlan.value);
   try {
     const response = await axios.post(
       `http://localhost/tripplan`,
@@ -823,10 +784,9 @@ const renderChart = async () => {
   });
 };
 const renderChart2 = async () => {
-  console.log("dfsd");
   await nextTick(); // DOM 렌더링 후 실행
   const canvas = document.getElementById("chart2");
-  console.log(canvas);
+
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
@@ -934,8 +894,6 @@ const fetchTopSidoCodesAtt = async () => {
       `http://localhost/tripplan/top-att/${searchModel.value.selectedLocation}`
     );
 
-    console.log(response.data);
-
     topSidoAttData.value = {
       labels: [],
       datasets: [
@@ -1014,9 +972,10 @@ onMounted(async () => {
   } else {
     const script = document.createElement("script");
     /* global kakao */
-    script.onload = () => kakao.maps.load(initMap);
     script.src =
       "http://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=80a51ca8893edecb0612a0ba5858c1ad";
+
+    script.onload = () => kakao.maps.load(initMap);
 
     document.head.appendChild(script);
   }
