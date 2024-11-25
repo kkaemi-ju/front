@@ -154,6 +154,9 @@ import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import axios from "axios";
 import { storeToRefs } from "pinia";
 import { Heart } from "lucide-vue-next";
+import { useUserStore } from "@/stores/user";
+const userStore = useUserStore();
+const { userInfo } = storeToRefs(userStore);
 const originalLocations = [
   { sido_code: 1, sido_name: "서울" },
   { sido_code: 2, sido_name: "인천" },
@@ -232,11 +235,17 @@ const markerImageSrc =
 
 const favorites = ref([]);
 
-const toggleFavorite = (id) => {
+const toggleFavorite = async (id) => {
+  if (userInfo.value === null) {
+    alert("로그인 후 이용하실 수 있습니다.");
+    return;
+  }
   if (favorites.value.includes(id)) {
     favorites.value = favorites.value.filter((favId) => favId !== id);
+    await deleteFavorite(id);
   } else {
     favorites.value.push(id);
+    await createFavorite(id);
   }
 };
 const initMap = () => {
@@ -426,6 +435,8 @@ const handleSearch = async () => {
 
     tripList.value = response.data;
     addMarkers();
+
+    await getFavorite();
   } catch (error) {
     console.error("검색 요청 중 오류 발생:", error);
   }
@@ -595,7 +606,45 @@ const moveToCenter = (trip) => {
   }
 };
 const createFavorite = async (no) => {
-  const response = await axios.post(`http://localhost/attraction/favorite`, {});
+  const response = await axios.post(`http://localhost/attraction/favorite`, {
+    attractionsNo: no,
+    userId: userInfo.value.userId,
+  });
+  console.log(response);
+};
+const deleteFavorite = async (no) => {
+  const response = await axios.delete(`http://localhost/attraction/favorite`, {
+    params: {
+      attractionsNo: no,
+      userId: userInfo.value.userId,
+    },
+  });
+
+  console.log(response);
+};
+
+const getFavorite = async () => {
+  if (userInfo.value === null) return;
+  favorites.value = [];
+
+  const response = await axios.get(
+    `http://localhost/attraction/favorite/${userInfo.value.userId}`
+  );
+  const data = response.data;
+  for (let t of tripList.value) {
+    for (let d of data) {
+      if (t.no === d.attractionsNo) {
+        favorites.value.push(t.no);
+      }
+    }
+  }
+};
+const userCheck = () => {
+  if (userInfo.value === null) {
+    alert("로그인 후 이용하실 수 있습니다.");
+    return false;
+  }
+  return true;
 };
 watch(
   () => searchModel.value.selectedRecommendationType,
