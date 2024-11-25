@@ -61,7 +61,26 @@
 
     <!-- Map Section -->
     <div class="mb-8">
-      <h2 class="text-xl font-medium mb-4 text-black">지도</h2>
+      <div class="flex justify-between items-center mb-4">
+        <!-- Title -->
+        <h2 class="text-xl font-medium text-black">지도</h2>
+        <!-- Favorites Toggle Button -->
+        <button
+          @click="toggleFavorites"
+          class="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors duration-200"
+        >
+          <Heart
+            :class="{ 'fill-[#FF9100] stroke-[#FF9100]': showFavorites }"
+            class="w-5 h-5"
+          />
+          <span
+            class="text-sm font-medium"
+            :class="{ 'text-[#FF9100]': showFavorites }"
+          >
+            찜목록 보기
+          </span>
+        </button>
+      </div>
       <div
         ref="mapContainer"
         class="w-full h-[500px] bg-gray-200 rounded-lg"
@@ -130,11 +149,13 @@
               <td class="px-6 py-4 whitespace-nowrap">
                 <button
                   @click="toggleFavorite(trip.no)"
-                  class="text-gray-400 hover:text-red-500 focus:outline-none"
+                  class="text-gray-400 hover:text-orange-500 focus:outline-none"
                 >
                   <Heart
                     :class="{
-                      'fill-red-500 text-red-500': favorites.includes(trip.no),
+                      'fill-orange-500 text-orange-500': favorites.includes(
+                        trip.no
+                      ),
                     }"
                   />
                   <span class="sr-only">찜하기</span>
@@ -234,18 +255,43 @@ const markerImageSrc =
   "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png"; // 마커 이미지 URL
 
 const favorites = ref([]);
+// 찜하기 상태 관리
+const showFavorites = ref(false);
 
-const toggleFavorite = async (id) => {
+// 찜목록 토글 함수
+const toggleFavorites = async () => {
   if (userInfo.value === null) {
     alert("로그인 후 이용하실 수 있습니다.");
     return;
   }
-  if (favorites.value.includes(id)) {
-    favorites.value = favorites.value.filter((favId) => favId !== id);
-    await deleteFavorite(id);
+
+  if (showFavorites.value) {
+    // 찜목록 누른 상태
+    tripList.value = [];
   } else {
-    favorites.value.push(id);
-    await createFavorite(id);
+    // 안 누른 상태
+    await getFavoriteAtt();
+  }
+
+  showFavorites.value = !showFavorites.value;
+};
+const toggleFavorite = async (no) => {
+  if (userInfo.value === null) {
+    alert("로그인 후 이용하실 수 있습니다.");
+    return;
+  }
+  if (favorites.value.includes(no)) {
+    // 찜 취소
+    if (showFavorites.value) {
+      // 찜 목록 보기 상태라면 리스트에서 지우기
+      tripList.value = tripList.value.filter((trip) => trip.no !== no);
+    }
+    favorites.value = favorites.value.filter((favId) => favId !== no);
+    await deleteFavorite(no);
+  } else {
+    // 찜 하기
+    favorites.value.push(no);
+    await createFavorite(no);
   }
 };
 const initMap = () => {
@@ -610,7 +656,6 @@ const createFavorite = async (no) => {
     attractionsNo: no,
     userId: userInfo.value.userId,
   });
-  console.log(response);
 };
 const deleteFavorite = async (no) => {
   const response = await axios.delete(`http://localhost/attraction/favorite`, {
@@ -619,8 +664,6 @@ const deleteFavorite = async (no) => {
       userId: userInfo.value.userId,
     },
   });
-
-  console.log(response);
 };
 
 const getFavorite = async () => {
@@ -638,6 +681,21 @@ const getFavorite = async () => {
       }
     }
   }
+};
+
+const getFavoriteAtt = async () => {
+  if (userInfo.value === null) return;
+  favorites.value = [];
+
+  const response = await axios.get(
+    `http://localhost/attraction/favorite/att/${userInfo.value.userId}`
+  );
+  const data = response.data;
+  favorites.value = [];
+  for (let d of data) {
+    favorites.value.push(d.no);
+  }
+  tripList.value = data;
 };
 const userCheck = () => {
   if (userInfo.value === null) {
