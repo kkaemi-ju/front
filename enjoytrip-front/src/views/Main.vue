@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-[#FFFBE6] flex flex-col min-h-screen">
+  <div class="bg-white flex flex-col min-h-screen">
     <!-- Main Content -->
     <main class="flex-grow">
       <!-- Hero Section -->
@@ -87,7 +87,7 @@
       </section>
 
       <!-- Categories -->
-      <section class="py-12 bg-[#FFFBE6]">
+      <section class="py-12 bg-white">
         <div class="container mx-auto max-w-screen-lg px-4">
           <div
             class="grid grid-cols-1 sm:grid-cols-4 gap-8 justify-items-center"
@@ -117,14 +117,14 @@
       </section>
 
       <!-- Hot Spots -->
-      <section class="py-12 bg-[#FFFBE6]">
-        <div class="container mx-auto px-4">
+      <section class="py-12 bg-white">
+        <div class="container mx-auto px-4 bg-white">
           <h2 class="text-2xl font-bold mb-8">요즘 핫한 관광지?!</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div
               v-for="spot in hotSpots"
               :key="spot.title"
-              class="overflow-hidden hover:shadow-lg transition-shadow bg-white rounded-lg"
+              class="overflow-hidden hover:shadow-lg transition-shadow bg-white rounded-lg border-2"
             >
               <img
                 :src="spot.image"
@@ -285,7 +285,7 @@ const getImageAndName = async (AttractionList) => {
       console.log("infos : " + response.data);
       hotSpots.value = response.data.map((info) => ({
         title: info.title,
-        image: info.firstImage1 || "/src/assets/img/no-img.png",
+        image: info.firstImage1 || "/src/assets/img/no-img2.jpg",
         addr: info.addr1,
       }));
     }
@@ -312,5 +312,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Add any component-specific styles here */
+body {
+  background: none !important;
+}
 </style>
