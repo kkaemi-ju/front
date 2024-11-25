@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Header -->
-    <header class="sticky top-0 z-50 w-full border-b bg-[#FFFBE6]">
+    <header class="sticky top-0 z-50 w-full border-b bg-white">
       <div
         class="container mx-auto flex h-16 items-center justify-between px-4"
       >
