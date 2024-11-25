@@ -16,13 +16,23 @@
           @click="selectLocation(index, location)"
         >
           <div
-            class="rounded-full flex items-center justify-center mb-2 text-white transition-all duration-300"
+            class="rounded-full flex items-center justify-center mb-2 text-white font-bold transition-all duration-300"
             :class="{
               'w-24 h-24 bg-[#FF9100]': index === centerIndex,
               'w-20 h-20 bg-[#00712D]': index !== centerIndex,
             }"
+            :style="{
+              backgroundImage: `url(${
+                location.image || '/src/assets/img/default-image.png'
+              })`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              // opacity: index === centerIndex ? 1 : 0.7,
+            }"
           >
-            <span class="text-sm text-center">{{ location.sido_name }}</span>
+            <span class="text-sm text-center font-bold">{{
+              location.sido_name
+            }}</span>
           </div>
         </div>
       </div>
@@ -155,23 +165,55 @@ import axios from "axios";
 import { storeToRefs } from "pinia";
 import { Heart } from "lucide-vue-next";
 const originalLocations = [
-  { sido_code: 1, sido_name: "서울" },
-  { sido_code: 2, sido_name: "인천" },
-  { sido_code: 3, sido_name: "대전" },
-  { sido_code: 4, sido_name: "대구" },
-  { sido_code: 5, sido_name: "광주" },
-  { sido_code: 6, sido_name: "부산" },
-  { sido_code: 7, sido_name: "울산" },
-  { sido_code: 8, sido_name: "세종특별자치시" },
-  { sido_code: 31, sido_name: "경기도" },
-  { sido_code: 32, sido_name: "강원특별자치도" },
-  { sido_code: 33, sido_name: "충청북도" },
-  { sido_code: 34, sido_name: "충청남도" },
-  { sido_code: 35, sido_name: "경상북도" },
-  { sido_code: 36, sido_name: "경상남도" },
-  { sido_code: 37, sido_name: "전북특별자치도" },
-  { sido_code: 38, sido_name: "전라남도" },
-  { sido_code: 39, sido_name: "제주도" },
+  { sido_code: 1, sido_name: "서울", image: "/src/assets/img/Seoul.png" },
+  { sido_code: 2, sido_name: "인천", image: "/src/assets/img/Incheon.png" },
+  { sido_code: 3, sido_name: "대전", image: "/src/assets/img/Daejeon.png" },
+  { sido_code: 4, sido_name: "대구", image: "/src/assets/img/Daegu.png" },
+  { sido_code: 5, sido_name: "광주", image: "/src/assets/img/Gwangju.png" },
+  { sido_code: 6, sido_name: "부산", image: "/src/assets/img/Busan.png" },
+  { sido_code: 7, sido_name: "울산", image: "/src/assets/img/Ulsan.png" },
+  {
+    sido_code: 8,
+    sido_name: "세종",
+    image: "/src/assets/img/Sejong.png",
+  },
+  { sido_code: 31, sido_name: "경기도", image: "/src/assets/img/Gyeonggi.png" },
+  {
+    sido_code: 32,
+    sido_name: "강원도",
+    image: "/src/assets/img/Gangwon.png",
+  },
+  {
+    sido_code: 33,
+    sido_name: "충청북도",
+    image: "/src/assets/img/Chungbuk.png",
+  },
+  {
+    sido_code: 34,
+    sido_name: "충청남도",
+    image: "src/assets/img/Chungnam.png",
+  },
+  {
+    sido_code: 35,
+    sido_name: "경상북도",
+    image: "src/assets/img/Gyeongbuk.png",
+  },
+  {
+    sido_code: 36,
+    sido_name: "경상남도",
+    image: "src/assets/img/Gyeongnam.png",
+  },
+  {
+    sido_code: 37,
+    sido_name: "전라북도",
+    image: "/src/assets/img/Jeonbuk.png",
+  },
+  {
+    sido_code: 38,
+    sido_name: "전라남도",
+    image: "/src/assets/img/Jeonnam.png",
+  },
+  { sido_code: 39, sido_name: "제주도", image: "/src/assets/img/Jeju.png" },
 ];
 
 // 지역별 중심좌표

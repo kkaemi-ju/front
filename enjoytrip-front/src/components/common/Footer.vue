@@ -18,16 +18,7 @@
         </div>
         <div>
           <h4 class="text-lg font-semibold mb-4">소셜 미디어</h4>
-          <div class="flex gap-4">
-            <a
-              v-for="social in socialMedia"
-              :key="social"
-              :href="'#'"
-              class="text-sm hover:text-[#D5ED9F]"
-            >
-              {{ social }}
-            </a>
-          </div>
+          <div class="flex gap-4"></div>
         </div>
       </div>
       <div class="mt-4 pt-4 border-t border-white/20 text-center text-sm">
