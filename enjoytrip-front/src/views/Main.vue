@@ -134,7 +134,7 @@
               <div class="p-4">
                 <h3 class="font-semibold">{{ spot.title }}</h3>
                 <p class="text-sm text-gray-600 mt-2">
-                  특별한 순간을 만나보세요
+                  {{ spot.addr }}
                 </p>
               </div>
             </div>
@@ -184,12 +184,7 @@ const categories = ref([
   },
 ]);
 
-const hotSpots = ref([
-  { title: "싸피 구미캠", image: "/placeholder.svg?height=400&width=300" },
-  { title: "재경집", image: "/placeholder.svg?height=400&width=300" },
-  { title: "선주집", image: "/placeholder.svg?height=400&width=300" },
-  { title: "베른", image: "/placeholder.svg?height=400&width=300" },
-]);
+const hotSpots = ref([]);
 
 const heroSlides = ref([
   {
@@ -205,7 +200,7 @@ const heroSlides = ref([
   {
     image: "/src/assets/img/image-copy3.png",
     title: "당신만의 여행 스토리",
-    subtitle: "떠나고와 함께 시작하세요",
+    subtitle: "떠나GO와 함께 시작하세요",
   },
 ]);
 
@@ -267,13 +262,11 @@ const getTopAttractions = async () => {
   try {
     const response = await axios.get(`http://localhost/attraction/top`);
     if (response.status === 200) {
-      const topAttractions = response.data.slice(0, 5); // 상위 5개
-      console.log("Top Attractions: ", JSON.stringify(topAttractions, null, 2)); // JSON으로 출력
+      const topAttractions = response.data.slice(0, 4); // 상위 5개
 
       const AttractionList = topAttractions.map(
         (attraction) => attraction.attractions_no
       );
-      console.log("Cnt List: ", AttractionList);
       getImageAndName(AttractionList);
     }
   } catch (error) {
@@ -283,7 +276,25 @@ const getTopAttractions = async () => {
 
 const getImageAndName = async (AttractionList) => {
   // 백에서 이름이랑 이미지 받아오기
-  console.log("toptoptoop " + AttractionList);
+  try {
+    const response = await axios.post(
+      `http://localhost/attraction/info`,
+      AttractionList
+    );
+    if (response.status === 200) {
+      console.log("infos : " + response.data);
+      hotSpots.value = response.data.map((info) => ({
+        title: info.title,
+        image: info.firstImage1,
+        addr: info.addr1,
+      }));
+      // console.log(
+      //   "infos (stringify): " + JSON.stringify(response.data, null, 2)
+      // );
+    }
+  } catch (error) {
+    console.error(error.message);
+  }
 };
 // Watch for manual navigation to reset timer
 watch(currentSlide, () => {
