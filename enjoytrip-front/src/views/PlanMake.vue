@@ -59,7 +59,7 @@
       </div>
     </header>
 
-    <div class="flex relative">
+    <div class="flex relative max-h-[calc(100vh-100px)]">
       <!-- Left Sidebar -->
       <div
         :class="['transition-all duration-300']"
@@ -109,7 +109,10 @@
         <!-- Content Area -->
         <div class="flex-1 bg-white">
           <!-- Region Selection -->
-          <div v-if="currentStep === 1" class="p-4">
+          <div
+            v-if="currentStep === 1"
+            class="p-4 h-[calc(100vh)] flex flex-col"
+          >
             <h3 class="text-lg font-medium mb-4">지역</h3>
             <select
               v-model="searchModel.selectedLocation"
@@ -125,24 +128,21 @@
             </select>
 
             <div
-              class="bg-gradient-to-br from-[#FFFBE6] to-[#FFFBE6] rounded-3xl shadow-lg p-8 border border-[#00712D]/20"
-              style="margin-top: 150px"
+              class="bg-gradient-to-br from-[#FFFBE6] to-[#FFFBE6] rounded-3xl shadow-lg p-8 border border-[#00712D]/20 mt-8"
             >
               <!-- Chart Section -->
-              <div
-                class="text-center mb-8 flex flex-col items-center mt-10 canvas-container"
-              >
+              <div class="text-center flex flex-col items-center">
                 <h2
                   class="text-2xl font-extrabold text-[#00712D] mb-2 relative inline-block"
                 >
                   떠나고GO의 추천
                 </h2>
-                <p class="text-gray-600 text-lg">
+                <p class="text-gray-600 text-lg mb-4">
                   가장 핫한 지역 Top 3
                   <span class="inline-block animate-bounce ml-1">🔥</span>
                 </p>
                 <div
-                  class="bg-white rounded-2xl p-6 shadow-inner border border-[#00712D]/10"
+                  class="bg-white rounded-2xl p-6 shadow-inner border border-[#00712D]/10 w-full h-[300px]"
                 >
                   <canvas id="chart"></canvas>
                 </div>
@@ -220,7 +220,7 @@
                 </button>
               </div>
               <div
-                class="h-screen flex flex-col p-4"
+                class="max-h-[calc(100vh-200px)] flex flex-col p-4"
                 v-if="updatedTripList.length > 0"
               >
                 <div class="flex-1 overflow-y-auto">
@@ -345,10 +345,7 @@
       <!-- Right Content Area (Map Placeholder) -->
       <div
         ref="mapContainer"
-        :class="[
-          'flex-1 bg-gray-50 min-h-[calc(100vh-64px)] rounded-lg',
-          sidebarOpen ? '' : 'w-full',
-        ]"
+        :class="['flex-1 bg-gray-50 rounded-lg', sidebarOpen ? '' : 'w-full']"
       ></div>
     </div>
     <!-- Modal -->
@@ -871,7 +868,7 @@ const openModal = (event) => {
   // 모달 위치 설정
   modalPosition.value = {
     top: clientY + 10, // 클릭 위치 바로 아래
-    left: clientX + 10, // 클릭 위치 바로 오른쪽
+    left: clientX + 10, // 클릭 ���치 바로 오른쪽
   };
   renderChart2();
 };
