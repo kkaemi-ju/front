@@ -187,7 +187,7 @@
               >
                 <td class="w-[150px] px-6 py-4 whitespace-nowrap">
                   <img
-                    :src="trip.firstImage1 || 'src/assets/img/no-img.png'"
+                    :src="trip.firstImage1 || 'src/assets/img/no-img2.jpg'"
                     :alt="trip.title"
                     class="h-20 w-20 rounded-md object-cover"
                   />
@@ -658,7 +658,7 @@ const createInfoWindowContent = (trip) => {
     <div style="padding: 10px; max-width: 200px; word-wrap: break-word; text-align: center; overflow: hidden; box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); border-radius: 8px; font-family: Arial, sans-serif;">
       <div style="margin-bottom: 10px;">
         <img
-          src="${trip.firstImage1 || "src/assets/img/no-img.png"}"
+          src="${trip.firstImage1 || "src/assets/img/no-img2.jpg"}"
           alt="${trip.title}"
           style="width: 100%; max-width: 150px; height: auto; border-radius: 4px;"
         />
@@ -739,8 +739,15 @@ const addMarkers = () => {
       removable: true,
     });
 
+    // 마커 클릭 이벤트에서 기존 열린 인포윈도우 닫기
     kakao.maps.event.addListener(newMarker, "click", () => {
-      markers.value.forEach((item) => item.infowindow.close());
+      // 현재 열려있는 모든 인포윈도우 닫기
+      markers.value.forEach((item) => {
+        if (item.infowindow) {
+          item.infowindow.close();
+        }
+      });
+      // 클릭한 마커의 인포윈도우 열기
       infowindow.open(map.value, newMarker);
     });
 
@@ -761,6 +768,13 @@ const moveToCenter = (trip) => {
 
   const newCenter = new kakao.maps.LatLng(trip.latitude, trip.longitude);
   map.value.setCenter(newCenter);
+
+  // 기존 열린 인포윈도우들 모두 닫기
+  markers.value.forEach((item) => {
+    if (item.infowindow) {
+      item.infowindow.close();
+    }
+  });
 
   clearExistingMarkers();
 
