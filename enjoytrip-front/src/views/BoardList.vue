@@ -166,7 +166,7 @@ const searchQuery = ref(""); // 검색어
 const activeBoard = ref(""); // 활성 게시판 ID 설정
 const posts = ref([]); // 게시글 데이터
 const currentPage = ref(1); // 현재 페이지 번호
-const postsPerPage = 15; // 페이지당 게시글 개수
+const postsPerPage = 10; // 페이지당 게시글 개수
 
 const goToPage = (page, data = null) => {
   if (page === "boardwrite") {
