@@ -739,8 +739,15 @@ const addMarkers = () => {
       removable: true,
     });
 
+    // 마커 클릭 이벤트에서 기존 열린 인포윈도우 닫기
     kakao.maps.event.addListener(newMarker, "click", () => {
-      markers.value.forEach((item) => item.infowindow.close());
+      // 현재 열려있는 모든 인포윈도우 닫기
+      markers.value.forEach((item) => {
+        if (item.infowindow) {
+          item.infowindow.close();
+        }
+      });
+      // 클릭한 마커의 인포윈도우 열기
       infowindow.open(map.value, newMarker);
     });
 
@@ -761,6 +768,13 @@ const moveToCenter = (trip) => {
 
   const newCenter = new kakao.maps.LatLng(trip.latitude, trip.longitude);
   map.value.setCenter(newCenter);
+
+  // 기존 열린 인포윈도우들 모두 닫기
+  markers.value.forEach((item) => {
+    if (item.infowindow) {
+      item.infowindow.close();
+    }
+  });
 
   clearExistingMarkers();
 
