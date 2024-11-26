@@ -138,13 +138,6 @@ const menuItems = [
     width: 90,
     height: 20,
   },
-  {
-    name: "트립클립",
-    path: "/tripclip",
-    image: "src/assets/img/tripclip_white.png",
-    width: 100,
-    height: 30,
-  },
 ];
 
 // 로그인
