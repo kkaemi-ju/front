@@ -19,6 +19,7 @@
           type="text"
           v-model="form.userId"
           placeholder="아이디"
+          readonly
           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
         />
       </div>
@@ -144,7 +145,12 @@ const handleSubmit = () => {
 };
 const handleUpdate = async () => {
   try {
-    console.log(form.value);
+    const isConfirmed = confirm("계정을 수정하시겠습니까?");
+
+    if (!isConfirmed) {
+      return; // 사용자가 취소를 선택한 경우
+    }
+
     const response = await axios.post(
       "http://localhost/mypage/update",
       form.value,
